@@ -1,0 +1,1 @@
+("6.12" ("24b91119cae9ea448f5827df4bf41eaf4780c12c" . "e46c61ddb1471afbc71ffbb9490961a47fd363f1") #"C:\\workspace\\WS_Racket\\EOPL\\let-lang\\data-structures.scm" (collects #"eopl" #"eopl.rkt") (collects #"errortrace" #"errortrace-key.rkt"))
