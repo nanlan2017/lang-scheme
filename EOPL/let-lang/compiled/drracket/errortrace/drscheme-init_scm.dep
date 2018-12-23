@@ -1,1 +1,0 @@
-("6.12" ("a6cbed224f94beef286654efc77eee35a5a2d0d8" . "2091072361ad81ca99e7b5b53c10718569e9e706") (collects #"errortrace" #"errortrace-key.rkt") (collects #"mzlib" #"pretty.rkt") (collects #"mzlib" #"trace.rkt") (collects #"mzscheme" #"main.rkt"))
