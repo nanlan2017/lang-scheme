@@ -66,6 +66,7 @@
 
     ))
 
+;; eval : bool-exp
 (define (eval-bool-exp exp env)
   (cases Bool-exp exp
     (const-true ()
@@ -78,12 +79,24 @@
                  ($bool-val (if (= 0 v2) #t #f))))
     ))
 
+;; eval : print
+(define (eval-print-exp pexp env)
+  (cases Print-exp pexp
+    (a-print-exp (exp)
+                 (let [(v (eval exp env))]
+                   (begin
+                     (eopl:printf "_P_R_I_N_T_ :~s~n" v)
+                     1)))))
+
+;;;;;;;;;;    eval : program
 (define (eval-program prog)
   (cases program prog
     (a-program (expr)
                (eval expr (init-env)))
     (b-program (b-expr)
-               (eval-bool-exp b-expr (init-env)))))
+               (eval-bool-exp b-expr (init-env)))
+    (prt-program (p-expr)
+                 (eval-print-exp p-expr (init-env)))))
 ;;=============================================================  
 ;; :: String -> ExpVal
 (define (interp src)

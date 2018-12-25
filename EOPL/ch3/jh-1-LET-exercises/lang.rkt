@@ -28,6 +28,8 @@
              a-program)
     (program (Bool-exp)
              b-program)
+    (program (Print-exp)
+             prt-program)
     ;---------------------------------------------------------------------
     ;; Expression
     (expression (number)   ; 4
@@ -81,7 +83,9 @@
               const-false)
     (Bool-exp ("zero?" "(" expression ")")            ; zero? (e1)
               zero?-exp)
-    
+    ;---------------------------------------------------------------------------
+    (Print-exp ("(" "print" expression ")")
+               a-print-exp)
     ))
        
 ;;======================================================== SLLGEN

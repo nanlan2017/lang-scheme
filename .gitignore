@@ -7,6 +7,8 @@
 .#*.scm
 
 EOPL-src/
+EOPL-exer-EFanZh/
+EOPL-exer-chenyukang/
 
 *.dep
 *.zo

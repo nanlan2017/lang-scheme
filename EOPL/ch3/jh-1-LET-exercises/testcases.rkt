@@ -79,6 +79,13 @@
 (define src-cond-0
   "cond (zero?(x) ==> 101) (zero?(v) ==> 102) (zero? (0) ==> 103) end"
   )
+;```````````````````` Bool-exp
+
+;```````````````````` Print
+(define src-prt-0
+  "(print x)"
+  )
+
 ;;================================================================================================ Error src
 (define srcx-0
   "if zero? then x"
@@ -87,17 +94,18 @@
 ;;===========================================================
 (define (run-tests)
   (begin 
-    (interp2 src-empty)
-    (interp2 src-cons-0)
-    (interp2 src-cons-1)
-    (interp2 src-cons-2)
-    (interp2 src-cons-3)
-    (interp2 src-cons-4)
-    (interp2 src-cons-5)
-    (interp2 src-list-)
-    (interp2 src-list-0)
-    (interp2 src-list-1)
-    (interp2 src-cond-0)
+;    (interp2 src-empty)
+;    (interp2 src-cons-0)
+;    (interp2 src-cons-1)
+;    (interp2 src-cons-2)
+;    (interp2 src-cons-3)
+;    (interp2 src-cons-4)
+;    (interp2 src-cons-5)
+;    (interp2 src-list-)
+;    (interp2 src-list-0)
+;    (interp2 src-list-1)
+;    (interp2 src-cond-0)
+    (interp src-prt-0)
     ))
 (run-tests)
 
