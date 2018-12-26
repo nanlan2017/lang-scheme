@@ -12,23 +12,24 @@
   (define the-grammar
     '(
       (program (expression) a-program)
-
+      ;----------------- expression -------------------------------------
       (expression (number) const-exp)
       (expression (identifier) var-exp)
       (expression ("-" "(" expression "," expression ")")  diff-exp)
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)
-      
+      ; built-in operators
       (expression ("+" "(" expression "," expression ")") add-exp)
       (expression ("*" "(" expression "," expression ")") mult-exp)
-
       ; 1-parameter procedure
       (expression ("proc" "(" identifier ")" expression) proc-exp)
       (expression ("(" expression expression")") call-exp)
       ; multiple-letrec
       (expression ("letrec*" (arbno identifier "(" identifier ")" "=" expression) "in" expression) letrec*-exp)
+      ; begin
       (expression ("begin" (separated-list expression ";") "end") begin-exp)
+      ; assignment
       (expression ("set" identifier "=" expression) assign-exp)
       ))
       

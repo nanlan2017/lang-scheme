@@ -1,6 +1,10 @@
 (module utils (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
+  ;------------------------------------------------------------------ 
 
+  (define identifier? symbol?)
+
+  ;------------------------------------------------------------------ list utils
   (define (drop lst cnt)
     (let [(size (length lst))]
       (cond
@@ -17,9 +21,7 @@
         [(= 0 cnt) '()]
         [else (cons (car lst)
                     (take (cdr lst) (- cnt 1)))])))
-
-  (define identifier? symbol?)
-
+  
   (define (list-last lst)
     (cond
       [(null? lst) '()]
