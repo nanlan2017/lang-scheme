@@ -11,6 +11,10 @@
 
   (define the-grammar
     '((program (expression) a-program)
+      ;------------------------- type -------------------------------------
+      (type ("int") int-type)      
+      (type ("bool") bool-type)      
+      (type ("(" type "->" type ")") proc-type)
       ;------------------------- Expression -------------------------------
       (expression (number) const-exp)
       (expression (identifier) var-exp)
@@ -18,11 +22,11 @@
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)
-      
-      (expression ("proc" "(" identifier")" expression) proc-exp)
+      ; single-argument procedure
+      (expression ("proc" "(" identifier ":" type ")" expression) proc-exp)
       (expression ("(" expression expression ")") call-exp)
-      
-      (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
+      ; letrec int fact(x:int) = ...   // fact::int->int
+      (expression ("letrec" type identifier "(" identifier ":" type ")" "=" expression "in" expression) letrec-exp)      
       ))
       
   ; ================================================================== SLLGEN
