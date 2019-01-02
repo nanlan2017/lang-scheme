@@ -75,29 +75,6 @@
                        (if (eqv? var p-name)
                            ($proc-val ($procedure b-var p-body env))
                            (apply-env saved-env var)))
-      ))
-  ;;======================================= tenv (symbol <-> type)
-  (define-datatype TyEnv TyEnv?
-    ($empty-tyenv)
-    ($extend-tyenv
-     (var symbol?)
-     (ty type?)
-     (tyenv TyEnv?))
-    )
-
-  (define (init-tyenv)
-    ($extend-tyenv 'i (int-type)
-                 ($extend-tyenv 'v (int-type)
-                              ($extend-tyenv 'x (int-type) ($empty-tyenv)))))
-  (define (apply-tyenv tyenv var)
-    (cases TyEnv tyenv
-      ($empty-tyenv ()
-                  (eopl:error 'apply-tyenv "Didn't find in type-env while search : ~s" var))
-      ($extend-tyenv (saved-var saved-ty saved-tyenv)
-                     (if (equal? var saved-var)
-                         saved-ty
-                         (apply-tyenv saved-tyenv var)))))
-                         
-     
+      ))                              
 
   )

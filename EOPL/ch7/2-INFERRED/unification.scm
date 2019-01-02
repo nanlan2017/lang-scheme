@@ -1,10 +1,14 @@
 (module unification (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  
   (require "lang.scm")
-  (require "data-structures.scm")
+  (require "lang-type-helpers.scm")
+  ;=======================================================================
+  ; Briefly, unification is the process of finding a substitution that makes two given terms equal.
+  ; type inference is done by applying unification to type expressions (e.g. 'a -> 'b -> 'a) 
+  
   ; ███████████████ 把纸上 unification的过程 用数据结构、分解出的小api 构建出来
   ; ███████████████ 就是为type var 求出其value (Type)   【type var和 type只互相定义的】
+  ;=======================================================================
 
   ;  t0 = tf → t1
   ;  t1 = tx → t2
@@ -32,19 +36,22 @@
   (define (empty-subst)
     '())
 
+  ; ███████ extend-subst :: 6 * tv * t -> 6[tv=t]   // 6[..] 仍然是一个被加入equal pairs的 substitutions
   (define (extend-subst subst tvar ty)
     (cons (cons tvar ty)
           (map (lambda (pr) (let [(oldlhs (car pr))
                                   (oldrhs (cdr pr))]
                               (cons oldlhs (apply-one-subst oldrhs tvar ty))))
                subst)))
+
+  (define (substitution? s)
+    #t)
                               
   
-  ; t0 [tv = t1]
+  ; t2 ~ bool->t3  [t3 = int]   ====>   t2 ~ bool->int ;  t3 ~ int
   ; apply-one-subst :: Type * Tvar * Type -> Type
-
-  ; e.g. (apply-one-subst  'int->t0'  t0  bool ) =  'int->bool'
-  ;      (apply-one-subst (proc-type (int-type) (tvar-type 0)) (tvar-type 0) (bool-type))
+  ; 用处： 当把一条 equation限制 (tvar~texp) 加入substitutions中时，需要将 t3= int 用来更新 原substitutions中的右侧！
+  ;                                                                                      比如 t2 = bool-> t3 被更新为 t2 = bool -> int
   (define (apply-one-subst ty-target tvar ty1)
     (cases type ty-target
       (int-type ()
@@ -61,7 +68,7 @@
                      ty-target))
       ))
 
-  ; substitution :  list of pairs < TVar ~ Type >
+  ; ███████ t * 6 -> t6     // t6 仍然是一个被替换过的 type-exp
   (define (apply-subst-to-type ty subst)
     (cases type ty
       (int-type ()
@@ -78,13 +85,13 @@
                        ty)))
       ))
   ;========================================================================== unifier
-    ;; unifier : Type * Type * Subst * Exp -> Subst OR Fails
-  ;; Page: 264
+  ;; unifier : Type * Type * Subst * Exp -> Subst OR Fails
   (define unifier
     (lambda (ty1 ty2 subst exp)
       (let ((ty1 (apply-subst-to-type ty1 subst))
             (ty2 (apply-subst-to-type ty2 subst)))
         (cond
+          ;; 逻辑过程: P 263
           ((equal? ty1 ty2) subst)            
           ((tvar-type? ty1)
            (if (no-occurrence? ty1 ty2)
@@ -122,19 +129,20 @@
                   (type-to-external-form ty2)
                   exp)))
 
+  ;------------------------------------------------------------------------
   ;; no-occurrence? : Tvar * Type -> Bool
   ;; usage: Is there an occurrence of tvar in ty?
-  ;; Page: 265
+  ;; 举例   t0 ~  int -> t0  就 occur了！
   (define no-occurrence?
-    (lambda (tvar ty)
-      (cases type ty
+    (lambda (tvar tyexp)
+      (cases type tyexp
         (int-type () #t)
         (bool-type () #t)
         (proc-type (arg-type result-type)
                    (and
                     (no-occurrence? tvar arg-type)
                     (no-occurrence? tvar result-type)))
-        (tvar-type (serial-number) (not (equal? tvar ty))))))
+        (tvar-type (serial-number) (not (equal? tvar tyexp))))))
   
 
 
