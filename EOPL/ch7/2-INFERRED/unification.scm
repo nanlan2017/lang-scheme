@@ -1,35 +1,19 @@
 (module unification (lib "eopl.ss" "eopl")
-  (provide (all-defined-out))
   (require "lang.scm")
-  (require "lang-type-helpers.scm")
+  (require "lang-type.scm")
+
+  (provide substitution?
+           empty-subst
+
+           apply-subst-to-type
+           ░░unify)
   ;=======================================================================
   ; Briefly, unification is the process of finding a substitution that makes two given terms equal.
   ; type inference is done by applying unification to type expressions (e.g. 'a -> 'b -> 'a) 
   
   ; ███████████████ 把纸上 unification的过程 用数据结构、分解出的小api 构建出来
   ; ███████████████ 就是为type var 求出其value (Type)   【type var和 type只互相定义的】
-  ;=======================================================================
 
-  ;  t0 = tf → t1
-  ;  t1 = tx → t2
-  ;  t3 = int
-  ;  t4 = int
-  ;  t2 = int
-  ;  tf = int → t3
-  ;  tf = tx → t4
-  
-  ; 假设 int = 1, bool = 2,  存在变量 ti , f
-
-  ; 【全是一次的、则7元方程需要7条不重复的等式即可】
-  ; t0 = 1 -> 1 -> 1 -> 1
-  ; t1 = 1 -> 1
-  ; f = 1 -> 1
-  ; f = x -> 1
-
-  ;【定义基本的】
-  ; x = 1 -> f
-  ; f = 2
-  ; ===>  x = 1 -> 2        
   
   
   ;========================================================================== substitution  (如同env: t_i <-> Type)
@@ -44,14 +28,18 @@
                               (cons oldlhs (apply-one-subst oldrhs tvar ty))))
                subst)))
 
-  (define (substitution? s)
-    #t)
-                              
-  
-  ; t2 ~ bool->t3  [t3 = int]   ====>   t2 ~ bool->int ;  t3 ~ int
+  ; 辅助 @ substitution?
+  (define pair-of
+    (lambda (pred1 pred2)
+      (lambda (val)
+        (and (pair? val) (pred1 (car val)) (pred2 (cdr val))))))
+
+  (define substitution? 
+    (list-of (pair-of tvar-type? type?)))
+
+  ; 辅助 @ extend-subst
   ; apply-one-subst :: Type * Tvar * Type -> Type
-  ; 用处： 当把一条 equation限制 (tvar~texp) 加入substitutions中时，需要将 t3= int 用来更新 原substitutions中的右侧！
-  ;                                                                                      比如 t2 = bool-> t3 被更新为 t2 = bool -> int
+  ; 例子：t2 ~ bool->t3  [t3 = int]   ====>   t2 ~ bool->int ;  t3 ~ int    
   (define (apply-one-subst ty-target tvar ty1)
     (cases type ty-target
       (int-type ()
@@ -85,8 +73,9 @@
                        ty)))
       ))
   ;========================================================================== unifier
-  ;; unifier : Type * Type * Subst * Exp -> Subst OR Fails
-  (define unifier
+  ;; unifier : Type1 * Type2 * Subst * Exp ---> Subst OR Fails
+  ;; 更新subst : 使得 Type1 = Type2 这条约束equation成立。
+  (define ░░unify
     (lambda (ty1 ty2 subst exp)
       (let ((ty1 (apply-subst-to-type ty1 subst))
             (ty2 (apply-subst-to-type ty2 subst)))
@@ -102,11 +91,11 @@
                (extend-subst subst ty2 ty1)
                (report-no-occurrence-violation ty2 ty1 exp)))
           ((and (proc-type? ty1) (proc-type? ty2))
-           (let ((subst (unifier
+           (let ((subst (░░unify
                          (proc-type->arg-type ty1)
                          (proc-type->arg-type ty2)
                          subst exp)))
-             (let ((subst (unifier
+             (let ((subst (░░unify
                            (proc-type->result-type ty1)
                            (proc-type->result-type ty2)
                            subst exp)))
