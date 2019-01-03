@@ -5,9 +5,9 @@
   (provide substitution?
            empty-subst
 
-           apply-subst-to-type
+           apply-substs-to-type
            ░░unify)
-  ;=======================================================================
+  ;=========================================================================
   ; Briefly, unification is the process of finding a substitution that makes two given terms equal.
   ; type inference is done by applying unification to type expressions (e.g. 'a -> 'b -> 'a) 
   
@@ -25,7 +25,7 @@
     (cons (cons tvar ty)
           (map (lambda (pr) (let [(oldlhs (car pr))
                                   (oldrhs (cdr pr))]
-                              (cons oldlhs (apply-one-subst oldrhs tvar ty))))
+                              (cons oldlhs (apply-1-subst oldrhs tvar ty))))
                subst)))
 
   ; 辅助 @ substitution?
@@ -40,7 +40,7 @@
   ; 辅助 @ extend-subst
   ; apply-one-subst :: Type * Tvar * Type -> Type
   ; 例子：t2 ~ bool->t3  [t3 = int]   ====>   t2 ~ bool->int ;  t3 ~ int    
-  (define (apply-one-subst ty-target tvar ty1)
+  (define (apply-1-subst ty-target tvar ty1)
     (cases type ty-target
       (int-type ()
                 (int-type))
@@ -48,8 +48,8 @@
                  (bool-type))
       (proc-type (arg-type result-type)
                  (proc-type
-                  (apply-one-subst arg-type tvar ty1)
-                  (apply-one-subst result-type tvar ty1)))
+                  (apply-1-subst arg-type tvar ty1)
+                  (apply-1-subst result-type tvar ty1)))
       (tvar-type (sn)
                  (if (equal? ty-target tvar)
                      ty1
@@ -57,15 +57,15 @@
       ))
 
   ; ███████ t * 6 -> t6     // t6 仍然是一个被替换过的 type-exp
-  (define (apply-subst-to-type ty subst)
+  (define (apply-substs-to-type ty subst)
     (cases type ty
       (int-type ()
                 (int-type))
       (bool-type ()
                  (bool-type))
       (proc-type (t1 t2)
-                 (proc-type (apply-subst-to-type t1 subst)
-                            (apply-subst-to-type t2 subst)))
+                 (proc-type (apply-substs-to-type t1 subst)
+                            (apply-substs-to-type t2 subst)))
       (tvar-type (sn)
                  (let ((tmp (assoc ty subst)))
                    (if tmp
@@ -77,19 +77,23 @@
   ;; 更新subst : 使得 Type1 = Type2 这条约束equation成立。
   (define ░░unify
     (lambda (ty1 ty2 subst exp)
-      (let ((ty1 (apply-subst-to-type ty1 subst))
-            (ty2 (apply-subst-to-type ty2 subst)))
+      (let ((ty1 (apply-substs-to-type ty1 subst))
+            (ty2 (apply-substs-to-type ty2 subst)))
         (cond
-          ;; 逻辑过程: P 263
-          ((equal? ty1 ty2) subst)            
+          ; 逻辑过程: P 263
+          ((equal? ty1 ty2)
+           subst)
+          ; t0 == ...
           ((tvar-type? ty1)
            (if (no-occurrence? ty1 ty2)
                (extend-subst subst ty1 ty2)
                (report-no-occurrence-violation ty1 ty2 exp)))
+          ; ... == t0
           ((tvar-type? ty2)
            (if (no-occurrence? ty2 ty1)
                (extend-subst subst ty2 ty1)
                (report-no-occurrence-violation ty2 ty1 exp)))
+          
           ((and (proc-type? ty1) (proc-type? ty2))
            (let ((subst (░░unify
                          (proc-type->arg-type ty1)
@@ -101,7 +105,8 @@
                            subst exp)))
                subst)))
           (else (report-unification-failure ty1 ty2 exp))))))
-
+  
+  ;------------------------------------------------------------------------
   (define report-unification-failure
     (lambda (ty1 ty2 exp) 
       (eopl:error 'unification-failure
@@ -118,7 +123,7 @@
                   (type-to-external-form ty2)
                   exp)))
 
-  ;------------------------------------------------------------------------
+  
   ;; no-occurrence? : Tvar * Type -> Bool
   ;; usage: Is there an occurrence of tvar in ty?
   ;; 举例   t0 ~  int -> t0  就 occur了！

@@ -6,7 +6,7 @@
 
   (define src-0
     "
-proc (x : ?) -(x,1)
+proc (x : ?) -(x,1)            %%%%%%%% proc(x:t0) -(x,1) , 求t0->int
 "
     )
   (define src-1
