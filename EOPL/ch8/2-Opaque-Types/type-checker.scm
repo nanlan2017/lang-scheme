@@ -5,51 +5,8 @@
   (require "lang-type.scm")
   (require "data-structures.scm")
   (require "expand-type.scm")
-  ; ===============================================================================================================
-  ; ███████████████████████████ ‘type’就是每个exp/ sub-exp 都具备的“值”
-  ; ███████████████████████████ 必须像对 eval求val一样， 对type property的计算、表示也非常熟悉！
-  
-  ; █████████ type 也是 expression的 'val'      |        eval: expression的值是对其 sub-expression的值进行一些计算
-  ;                                 对于  -(x,3) ，即 diff-exp(x , 3)
-  ;     type :   int                                value:  value(x) - value(3)
-  
-  ; █████████ 也存在着 type rules == eval rules  (含type constraints: 相当于规定某些exp的值必须是5/ 必须相等)
-  
-  ; █████████ type-check 的逻辑：———————————— 就像检查特定exp是否是某个property value
-  ;             首先能够计算想关注的特定places 的expressions的 type，
-  ;             然后check : 某些types equals !      
-
-  ; █████████ type-infer 的逻辑：———————————— 已知  -(x,3)的 value为4， 求x的value
-  ;                              ———————————— 已知  proc (x) -(x,3)， 求x的type : 根据diff-exp的约束 type-of(x)==Int
-  ;             对未标记的exp/var加以 tvar， 并根据equations得到unification，从而确定types
-
-  ; ===============================================================================================================
-
-  
-  ; lookup-module-name-in-tenv :: TEnv * Symbol -> ModuleInterface
-  (define (lookup-module-name-in-tenv tenv m-name)
-    (cases TEnv tenv
-      ($extend-tenv-with-module (mod-id face saved-tenv)
-                                (if (eqv? m-name mod-id)
-                                    face
-                                    (lookup-module-name-in-tenv saved-tenv m-name)))
-      (else (lookup-module-name-in-tenv (get-nested-tenv tenv) m-name))))
-
-  ; lookup-qualified-var-in-tenv :: Symbol * Symbol * TEnv -> Type                      
-  (define (lookup-qualified-var-in-tenv m-name var-name tenv)
-    (let ((iface (lookup-module-name-in-tenv tenv m-name)))
-      (cases SimpleInterface iface
-        ($a-simple-interface (decls)
-                             (lookup-variable-name-in-decls var-name decls)))))
-
-  ; lookup-variable-name-in-decls :: Symbol * [VarDeclartion] -> Type
-  (define (lookup-variable-name-in-decls var-name decls)
-    (cases VarDeclaration (car decls)
-      ($a-var-declaration (var ty)
-                          (if (eqv? var var-name)
-                              ty
-                              (lookup-variable-name-in-decls var-name (cdr decls))))))
-
+  ; ===============================================================================================================  
+  ; parse得到 ModuleDefinition后， 直接加入 TEnv中  （此时要进行 Interface vs BodyImpl 的type check）
   (define (add-module-defns-to-tenv defns tenv)
     (if (null? defns)
         tenv
@@ -57,13 +14,16 @@
           ($a-module-definition (m-name expected-iface m-body)
                                 (let ((actual-iface (interface-of m-body tenv)))
                                   (if (<:-iface actual-iface expected-iface tenv)
-                                      (let ((new-tenv ($extend-tenv-with-module m-name
-                                                                                expected-iface
-                                                                                tenv)))
+                                      (let ((new-tenv ($extend-tenv-with-module m-name expected-iface tenv)))
                                         (add-module-defns-to-tenv (cdr defns) new-tenv))
                                       (report-module-doesnt-satisfy-iface m-name expected-iface actual-iface)))))))
 
-  ;--------------------------------------------------------------------- 检查interface和 body的一致性   begin
+  ;-------------------------------------------------------------------------------- 检查interface和 body的一致性
+  ; interface-of :: ModuleBody * TEnv -> ModuleInterface
+  (define (interface-of m-body tenv)
+    (cases ModuleBody m-body
+      ($a-module-body (var-defn-s)
+                      ($a-simple-interface (defns-to-decls var-defn-s tenv)))))
   ; defns-to-decls : Listof(Defn) × Tenv → Listof(Decl)
   (define (defns-to-decls defns tenv)
     (if (null? defns)
@@ -72,21 +32,18 @@
           ($a-var-definition (var-name exp)
                              (let ((ty (type-of exp tenv)))
                                (cons ($a-var-declaration var-name ty)
-                                     (defns-to-decls (cdr defns) ($extend-tenv var-name ty tenv))))))))
-  
-  ; interface-of :: ModuleBody * TEnv -> ModuleInterface
-  (define (interface-of m-body tenv)
-    (cases ModuleBody m-body
-      ($a-module-body (var-defn-s)
-                      ($a-simple-interface (defns-to-decls var-defn-s tenv)))))
-
+                                     (defns-to-decls (cdr defns) ($extend-tenv var-name ty tenv)))))
+          ($type-definition (name ty) ; type Point = Int  ===>  TEnv <Point~Int>
+                            (let [(actual-ty (expand-type ty tenv))]
+                              (defns-to-decls (cdr defns) ($extend-tenv-with-type actual-ty  tenv))))
+          )))
+  ;---------------------------------------------
   (define (<:-iface iface1 iface2 tenv)
     (cases SimpleInterface iface1
       ($a-simple-interface (var-decl-s1)
                            (cases SimpleInterface iface2
                              ($a-simple-interface (var-decl-s2)
                                                   (<:-decls var-decl-s1 var-decl-s2 tenv))))))
-
   (define (decl->name decl)
     (cases VarDeclaration decl
       ($a-var-declaration (var ty)
@@ -113,7 +70,7 @@
   (define (report-module-doesnt-satisfy-iface m-name expected-type actual-type)
     (eopl:printf  (list 'error-in-defn-of-module: m-name 'expected-type: expected-type 'actual-type: actual-type))
     (eopl:error 'type-of-module-defn))
-  ; ;--------------------------------------------------------------------- 检查interface和 body的一致性   end
+  ; ===============================================================================================================
   ;; check-equal-type! : Type * Type * Exp -> Unspecified
   (define ░░check-equal-type!
     (lambda (ty1 ty2 exp)
@@ -189,7 +146,7 @@
         
       ))
 
-   ; ===============================================================================================================
+  ; ===============================================================================================================
   (define (check src)
     (type-to-external-form (type-of-program (scan&parse src))))
 
