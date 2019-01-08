@@ -17,17 +17,23 @@
       (expression ("-" "(" expression "," expression ")")  diff-exp)
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
-      (expression ("(" expression expression ")") call-exp)   
+      (expression ("(" expression expression ")") call-exp)
+
+      (expression ("pack" "(" (separated-list expression ",") ")" ) pack-exp)
 
       ;; names : identifier
       (expression (identifier) var-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)
       (expression ("proc" "(" identifier ")" expression) proc-exp)
+
+      (expression ("unpack" (arbno identifier) "=" expression "in" expression) unpack-exp)
       
       ;; Nameless
       (expression ("%letref" number) nameless-var-exp)
       (expression ("%let" expression "in" expression) nameless-let-exp)
       (expression ("%lexproc" expression) nameless-proc-exp)
+
+      (expression ("%unpack" expression "in" expression) nameless-unpack-exp)
       ))
       
   ;;================================================================== SLLGEN
@@ -35,6 +41,7 @@
   (define show-the-datatypes
     (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))  
   (define scan&parse
-    (sllgen:make-string-parser the-lexical-spec the-grammar)) 
+    (sllgen:make-string-parser the-lexical-spec the-grammar))
+  (define sp scan&parse)
   
   )

@@ -21,15 +21,15 @@
       (Expression ("let" identifier "=" Expression "in" Expression) $let-exp)
       (Expression ("proc" "(" identifier ")" Expression) $proc-exp)
       (Expression ("(" Expression Expression ")") $call-exp)
+      (Expression ("letrec" identifier "(" identifier ")" "=" Expression "in" Expression) $letrec-exp)
       ))
       
   ;================================================================== SLLGEN
   (sllgen:make-define-datatypes the-lexical-spec the-grammar)  
   (define show-the-datatypes
-    (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))
-  (define just-scan
-    (sllgen:make-string-scanner the-lexical-spec the-grammar))  
+    (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))  
   (define scan&parse
-    (sllgen:make-string-parser the-lexical-spec the-grammar)) 
+    (sllgen:make-string-parser the-lexical-spec the-grammar))
+  (define sp scan&parse)
   
   )

@@ -190,10 +190,10 @@
         ;; interp.scm calls is-subclass?, which never raises an error,
         ;; so we don't need to do anything with class-name here.
 
-        ($cast-exp (exp class-name)
+        ($cast-exp (exp tar-cls-name)
                    (let ((obj-type (type-of exp tenv)))
                      (if (class-type? obj-type)
-                         ($class-type class-name)
+                         ($class-type tar-cls-name)
                          (report-bad-type-to-cast obj-type exp))))
 
         ;; instanceof in interp.scm behaves the same way as cast:  it

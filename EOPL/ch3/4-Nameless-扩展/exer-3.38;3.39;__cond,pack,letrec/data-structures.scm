@@ -8,7 +8,9 @@
     ($bool-val
      (v boolean?))
     ($proc-val
-     (p proc?))
+     (p Proc?))
+    ($list-val
+     (vals (list-of ExpVal?)))
     )
 
   ;; expval -> number
@@ -23,6 +25,12 @@
       ($bool-val (b) b)
       (else (eopl:error "Can't get bool-val from ExpVal :" expval))
       ))
+  ;; expval -> [ExpVal]
+  (define (expval->list expval)
+    (cases ExpVal expval
+      ($list-val (vals) vals)
+      (else (eopl:error "Can't get list-val from ExpVal :" expval))
+      ))
   ;; expval -> Proc
   (define (expval->proc expval)
     (cases ExpVal expval
@@ -30,9 +38,10 @@
       (else (eopl:error "Can't get proc-val from ExpVal :" expval))
       ))
   ;;====================================== Proc (抽象类型)
-  ; proc? :: SchemeVal -> Bool
-  (define (proc? v)
-    (procedure? v))    
+  (define-datatype Proc Proc?
+    ($procedure
+     (body expression?)
+     (env env?)))
   
   ;;====================================== SEnv  [i,v,x]
   ;; SEnv :: [symbol]
@@ -42,6 +51,8 @@
   
   (define (extend-senv var senv)
     (cons var senv))
+
+  (define extend-senv* append)
 
   ;; == list-index
   (define (apply-senv senv var)
@@ -62,6 +73,8 @@
 
   (define (extend-env val env)
     (cons val env))
+
+  (define extend-env* append)
 
   ;; == list-ref
   (define (apply-env env idx)

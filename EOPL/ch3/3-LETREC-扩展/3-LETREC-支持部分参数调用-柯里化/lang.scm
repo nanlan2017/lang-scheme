@@ -13,27 +13,26 @@
     '(
       (program (expression) a-program)
 
-      (expression (number) const-exp)      
+      (expression (number) const-exp)
+      (expression (identifier) var-exp)
       (expression ("-" "(" expression "," expression ")")  diff-exp)
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
-      (expression ("(" expression expression ")") call-exp)   
-
-      ;; names : identifier
-      (expression (identifier) var-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)
-      (expression ("proc" "(" identifier ")" expression) proc-exp)
-      
-      ;; Nameless
-      (expression ("%letref" number) nameless-var-exp)
-      (expression ("%let" expression "in" expression) nameless-let-exp)
-      (expression ("%lexproc" expression) nameless-proc-exp)
+      (expression ("+" "(" expression "," expression ")") add-exp)
+      (expression ("*" "(" expression "," expression ")") mult-exp)
+      (expression ("proc" "(" (arbno identifier) ")" expression) proc-exp)
+      (expression ("(" expression (arbno expression) ")") call-exp)
+
+      (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
       ))
       
   ;;================================================================== SLLGEN
   (sllgen:make-define-datatypes the-lexical-spec the-grammar)  
   (define show-the-datatypes
-    (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))  
+    (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))
+  (define just-scan
+    (sllgen:make-string-scanner the-lexical-spec the-grammar))  
   (define scan&parse
     (sllgen:make-string-parser the-lexical-spec the-grammar)) 
   

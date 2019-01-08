@@ -3,14 +3,12 @@
   
   (require "lang.scm")
   (require "data-structures.scm")
-  ;;============================================================= procedure
-  (define ($procedure body env)
-    (lambda (arg)
-      (value-of body (extend-env arg env))))
-  
+  ;;============================================================= procedure  
   ;; apply-procedure : Proc * ExpVal -> ExpVal
   (define (apply-procedure proc arg)
-    (proc arg))
+    (cases Proc proc
+      ($procedure (body-exp env)
+                  (value-of body-exp (extend-env arg env)))))
   
   ;;============================================================= trans
   ;; ★★★     _0, _1 分别对应该处的 senv 中的第0个符号、第1个符号
@@ -30,6 +28,9 @@
               (if-exp (trans e1 senv) (trans e2 senv) (trans e3 senv)))      
       (call-exp (rator rand)
                 (call-exp (trans rator senv) (trans rand senv)))
+      ; █--█--█
+      (pack-exp (exps)
+                (pack-exp (map (lambda (e) (trans e senv)) exps)))
       ;;`````````````````````````` Node -> Nameless Node
       (var-exp (x)
                (nameless-var-exp (apply-senv senv x)))
@@ -38,6 +39,9 @@
                                  (trans body (extend-senv var senv))))           ; let 会创建新binding
       (proc-exp (var body)
                 (nameless-proc-exp (trans body (extend-senv var senv))))         ; proc 会创建新binding (declaration)
+      ; █--█--█
+      (unpack-exp (vars lst-val-exp body-exp)
+                  (nameless-unpack-exp (trans lst-val-exp senv) (trans body-exp (extend-senv* vars senv))))
       ;;``````````````````````````
       (nameless-var-exp (idx)
                         (eopl:error "Nameless var shouldn't appear in trans"))
@@ -45,6 +49,9 @@
                         (eopl:error "Nameless let shouldn't appear in trans"))
       (nameless-proc-exp (body)
                          (eopl:error "Nameless proc shouldn't appear in trans"))
+      ; █--█--█
+      (nameless-unpack-exp (lst-val-exp body)
+                         (eopl:error "Nameless unpack shouldn't appear in trans"))
       ))
 
   (define (trans-program prog)
@@ -83,6 +90,9 @@
                 (let [(f (expval->proc (value-of rator env)))
                       (arg (value-of rand env))]
                   (apply-procedure f arg)))
+      ; █--█--█
+      (pack-exp (exps)
+                ($list-val (map (lambda (e) (value-of e env)) exps)))
       ;;``````````````````````````
       (var-exp (x)
                (eopl:error "Non-Nameless var shouldn't appear in eval"))
@@ -90,6 +100,9 @@
                (eopl:error "Non-Nameless let shouldn't appear in eval"))
       (proc-exp (var body)
                 (eopl:error "Non-Nameless proc shouldn't appear in eval"))
+      ; █--█--█
+      (unpack-exp (vars lst-val-exp body-exp)
+                  (eopl:error "Non-Nameless unpack shouldn't appear in eval"))
       
       ;;``````````````````````````
       (nameless-var-exp (idx)
@@ -98,7 +111,11 @@
                         (let [(v1 (value-of exp1 env))]
                           (value-of body (extend-env v1 env))))
       (nameless-proc-exp (body)
-                         ($proc-val ($procedure body env)))  ;; Wrap成ExpVal                  
+                         ($proc-val ($procedure body env)))  ;; Wrap成ExpVal
+      ; █--█--█
+      (nameless-unpack-exp (lst-val-exp body)
+                         (let [(vals (value-of lst-val-exp env))]
+                           (value-of body (extend-env* (expval->list vals) env))))
       ))
 
   ;; eval-program :: Nameless-Program -> ExpVal

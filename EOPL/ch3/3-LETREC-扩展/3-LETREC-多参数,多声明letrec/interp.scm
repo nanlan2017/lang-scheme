@@ -5,10 +5,10 @@
   (provide (all-defined-out))
   ; ===================================================================
 
-  (define (apply-procedure proc argv)
+  (define (apply-procedure proc argv-s)
     (cases Proc proc
-      ($procedure (var body-exp saved-env)
-                  (value-of body-exp ($extend-env var argv saved-env)))))
+      ($procedure (var-s body-exp saved-env)
+                  (value-of body-exp (extend-env* var-s argv-s saved-env)))))
   ; ===================================================================
   (define (interp src)
     (value-of-program (scan&parse src)))
@@ -41,13 +41,16 @@
       ($let-exp (var e1 body)
                 (let [(v1 (value-of e1 env))]
                   (value-of body ($extend-env var v1 env))))
-      ($proc-exp (var body)
-                 ($proc-val ($procedure var body env)))
-      ($call-exp (rator rand)
+      ($proc-exp (var-s body)
+                 ($proc-val ($procedure var-s body env)))
+      ($call-exp (rator rand-exp-s)
                  (let [(f (expval->proc (value-of rator env)))
-                       (arg (value-of rand env))]
-                   (apply-procedure f arg)))
-                  
+                       (argv-s (map (lambda (rand-exp) (value-of rand-exp env)) rand-exp-s))]
+                   (apply-procedure f argv-s)))
+
+      ; ███ 求值letrec-body时,要让 fid~ Proc放在Env中(因为不同于let,letrec-body中会使用fid)
+      ($letrec-exp (fid-s bvar-s-s proc-body-s letrec-body)
+                   (value-of letrec-body ($extend-env-rec* fid-s bvar-s-s proc-body-s env)))                                    
       ))
 
   

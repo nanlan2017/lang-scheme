@@ -47,6 +47,12 @@
                  (let [(f (expval->proc (value-of rator env)))
                        (arg (value-of rand env))]
                    (apply-procedure f arg)))
+
+      ; ███ 求值letrec-body时,要让 fid~ Proc放在Env中(因为不同于let,letrec-body中会使用fid)
+      ($letrec-exp (fid bvar proc-body letrec-body)
+                   (value-of letrec-body ($extend-env-rec fid bvar proc-body env)))
+                   ; x  $procedure ..env (this env doesn't include fid)
+                   ; (value-of letrec-body ($extend-env fid ($proc-val ($procedure bvar proc-body env)) env))                   
                   
       ))
 

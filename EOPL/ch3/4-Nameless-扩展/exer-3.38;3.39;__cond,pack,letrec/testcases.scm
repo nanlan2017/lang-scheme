@@ -4,7 +4,7 @@
   (require "lang.scm")
   (require "data-structures.scm")
   (require "interp.scm")
-  ;;=========================================================== (init-env) : [x=1, v=5, x=10]
+  ;;=========================================================== (init-env) : [i=1, v=5, x=10]
   (define src0-0
     "3"
     )
@@ -43,6 +43,14 @@
         let z = -(y,x)
         in -(x,y)"
     )
+  ;```````````````````````````````````````````````````````````` pack ,unpack
+  (define src-pack-1
+    "
+  let lst = pack(i,x)
+  in unpack a b = lst
+     in pack(b,a)
+  "
+    )
 
   )
 
@@ -68,3 +76,4 @@
 
 
 
+  

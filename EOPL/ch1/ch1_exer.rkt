@@ -17,3 +17,14 @@
 (number-elements '(a b c d e))
 ;;===========================================================================
 
+; zip的实现
+(define (zip lst1 lst2)
+  (if (null? lst1)
+      '()
+      (let* [(h1 (car lst1))
+             (r1 (map (λ (e2) (cons h1 e2)) lst2))]
+        (append r1 (zip (cdr lst1) lst2)))))
+    
+
+(zip '(a b c) '(x y z))
+

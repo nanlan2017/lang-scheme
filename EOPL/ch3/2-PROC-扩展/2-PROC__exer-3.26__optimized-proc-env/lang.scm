@@ -25,11 +25,7 @@
       
   ;================================================================== SLLGEN
   (sllgen:make-define-datatypes the-lexical-spec the-grammar)  
-  (define show-the-datatypes
-    (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))
-  (define just-scan
-    (sllgen:make-string-scanner the-lexical-spec the-grammar))  
-  (define scan&parse
-    (sllgen:make-string-parser the-lexical-spec the-grammar)) 
+  (define show-the-datatypes (lambda () (sllgen:list-define-datatypes the-lexical-spec the-grammar)))  
+  (define scan&parse (sllgen:make-string-parser the-lexical-spec the-grammar)) 
   
   )

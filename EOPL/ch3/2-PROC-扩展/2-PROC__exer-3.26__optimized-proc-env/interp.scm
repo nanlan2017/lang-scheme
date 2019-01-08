@@ -42,7 +42,7 @@
                 (let [(v1 (value-of e1 env))]
                   (value-of body ($extend-env var v1 env))))
       ($proc-exp (var body)
-                 ($proc-val ($procedure var body env)))
+                 ($proc-val ($procedure var body (reduce-env body env))))  ; ██████ reduce-env
       ($call-exp (rator rand)
                  (let [(f (expval->proc (value-of rator env)))
                        (arg (value-of rand env))]
@@ -50,8 +50,47 @@
                   
       ))
 
-  
   ; ===================================================================
-  
+  ; 返回只包含body-exp中的free variable的env即可
+  (define (reduce-env body-exp env)
+    (let* [(fvs (free-variables body-exp '()))
+           (rev-fvs (reverse fvs))]
+      (build-reduced-env rev-fvs env)))
 
+  (define (build-reduced-env rev-fvs env)
+    (if (null? rev-fvs)
+        ($empty-env)
+        (let [(var1 (car rev-fvs))]
+          ($extend-env var1 (apply-env env var1) (build-reduced-env (cdr rev-fvs) env)))))
+
+  ; fv \x-> x+y+z  == '(y z)
+  (define (free-variables expr bvar)
+    (cases Expression expr
+      ($const-exp (num)
+                  '())
+      ($var-exp (var)
+                (if (memq var bvar)
+                    '()
+                    (list var)))
+      ($diff-exp (exp1 exp2)
+                 (append (free-variables exp1 bvar)
+                         (free-variables exp2 bvar)))
+      ($zero?-exp (arg)
+                  (free-variables arg bvar))
+      ($if-exp (pred consq alte)
+               (append (free-variables pred bvar)
+                       (free-variables consq bvar)
+                       (free-variables alte bvar)))
+      ($let-exp (var value body)
+                (append (free-variables value bvar)
+                        (free-variables body (cons var bvar))))
+      ($proc-exp (var body)
+                 (append (free-variables body (cons var bvar))))
+      ($call-exp (var body)
+                 (append (free-variables var bvar)
+                         (free-variables body bvar)))
+      ))
+                
+
+                
   )
