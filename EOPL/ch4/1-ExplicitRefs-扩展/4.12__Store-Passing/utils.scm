@@ -1,6 +1,9 @@
 (module utils (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
 
+  (define identifier? symbol?)
+
+  ; `````````````````````````````````````````````````` List
   (define (drop lst cnt)
     (let [(size (length lst))]
       (cond
@@ -18,19 +21,28 @@
         [else (cons (car lst)
                     (take (cdr lst) (- cnt 1)))])))
 
-  (define identifier? symbol?)
-
   (define (list-last lst)
     (cond
       [(null? lst) '()]
       [(eqv? '() (cdr lst)) (car lst)]
       [else (list-last (cdr lst))]))
 
-  ;; list-index
-  (define (location sym los)
-    (cond
-      [(null? los) #f]
-      [(eqv? sym (car los)) 0]  ;; ?? 
-      [else (+ 1 (location sym (cdr los)))]))
+  ; f :: e * Acc -> Acc
+  (define (foldl f acc lst)
+    (if (null? lst)
+        acc
+        (let [(e1 (car lst))]
+          (foldl f (f e1 acc) (cdr lst)))))
+
+  ; f :: e * Acc -> Acc
+  (define (foldr f acc lst)
+    (if (null? lst)
+        acc
+        (let [(e1 (car lst))]
+          (f e1 (foldr f acc (cdr lst))))))
+
+  (foldl string-append "000" '("a" "b" "c"))  ; "cba000"
+  (foldr string-append "000" '("a" "b" "c"))  ; "abc000"
+  ; `````````````````````````````````````````````````` 
       
   )

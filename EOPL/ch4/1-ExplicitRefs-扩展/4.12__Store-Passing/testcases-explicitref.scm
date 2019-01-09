@@ -1,6 +1,7 @@
 (module testcases-explicitref (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "0-lang.scm")
+  (require "1-store.scm")
   (require "1-data-structures.scm")
   (require "2-interp.scm") 
   ;================================================================================
@@ -24,7 +25,7 @@
         end
     ")
 
-  (define src-2      ;; g:每次调用返回计数器+1  (带可变状态的闭包)
+  (define src-2      ;; g:每次调用返回计数器+9  (带可变状态的闭包)
     "
   let g = let counter = newref(0)
           in proc (dummy)

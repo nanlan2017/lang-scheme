@@ -1,1 +1,0 @@
-("6.12" ("be6a677d3f8dfbe669ef4a551fc47d29cecd750b" . "664dad9c65b385bd258c40f19e4b099f7c19d502") #"C:\\workspace\\WS_Racket\\EOPL\\ch4\\jh-2-ImplicitRefs\\lang.scm" #"C:\\workspace\\WS_Racket\\EOPL\\ch4\\jh-2-ImplicitRefs\\utils.scm" (collects #"eopl" #"eopl.rkt") (collects #"errortrace" #"errortrace-key.rkt"))

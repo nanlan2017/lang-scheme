@@ -11,39 +11,29 @@
 
   (define the-grammar
     '(
-      ;; 【Program】
       (program (expression) a-program)
-      ;; 【Expression】      
-      ; const-exp , zero? , diff-exp ,  if-exp , var-exp, let-exp
+
       (expression (number) const-exp)
       (expression (identifier) var-exp)
       (expression ("-" "(" expression "," expression ")")  diff-exp)
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)
-      
-      ; ★ operators
       (expression ("+" "(" expression "," expression ")") add-exp)
       (expression ("*" "(" expression "," expression ")") mult-exp)
-      ; //TODO   lets
-      ; //TODO   cons,car,cdr,emptylist, list
-      ; //TODO   cond
-      ; //TODO   print
-      ; //TODO   > < ==
-      
-      ; ★ proc :支持0/N参数
+
       (expression ("proc" "(" (arbno identifier) ")" expression) proc-exp)
       (expression ("(" expression (arbno expression) ")") call-exp)
-      ; letrec / letrec*
-      (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
-      (expression ("letrec*" (arbno identifier "(" identifier ")" "=" expression) "in" expression) letrec*-exp)
+
+      (expression ("letrec" (arbno identifier "(" (arbno identifier) ")" "=" expression) "in" expression) letrec-exp)
+
+      (expression ("begin" (separated-list expression ";") "end") begin-exp)
 
       ; ★ Explicit Ref(Pointer)--- C   vs  ----Java就是 Implicit Pointer
       (expression ("newref" "(" expression ")") newref-exp)
       (expression ("deref" "(" expression ")") deref-exp)
       (expression ("setref" "(" expression "," expression ")") setref-exp)
 
-      (expression ("begin" (separated-list expression ";") "end") begin-exp)
       ))
       
   ;;================================================================== SLLGEN
@@ -53,6 +43,7 @@
   (define just-scan
     (sllgen:make-string-scanner the-lexical-spec the-grammar))  
   (define scan&parse
-    (sllgen:make-string-parser the-lexical-spec the-grammar)) 
+    (sllgen:make-string-parser the-lexical-spec the-grammar))
+  (define sp scan&parse)
   
   )

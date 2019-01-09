@@ -38,6 +38,25 @@
      end
 ")
 
+  ;`````````````````````````````````` immutable
+  (define src-5
+    "
+letmutable a = 3
+in letmutable m_b = 11
+   in begin  set a = 101;
+             set m_b = 102;
+             -(a,m_b)
+      end
+")
+  ;`````````````````````````````````` dynamic assignment/ fluid binding
+  (define src-6
+    "
+letmutable x = 11
+in let p = proc (y) -(y,x)
+in -(setdynamic x = 17 during (p 22),    % 22-17=5
+(p 13))                                  % 13-11=2   ==> 5-2=3
+      ")
+
 
 
   )

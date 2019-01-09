@@ -83,7 +83,7 @@
   (define src-rec-1
     ; Error : 求值even时，odd还未出现
     "let even = proc (x) if zero?(x) then 1 else (odd -(x,1))
-     in let odd = proc (x) if zero?(x) then 0 else (even -(x,1))
+     in let odd = proc (x) 
         in (odd 13)"
     )
   ;; even-偶 : 偶数返回1，奇数返回0
@@ -133,16 +133,6 @@ in (times4 3)
     "letrec fact(n) = if zero?(n) then 1 else *(n,(fact -(n,1)))
      in (fact 6)"
     )
-  (define src-rec-8     ; -> 720
-    "letrec* fact(n) = if zero?(n) then 1 else *(n,(fact -(n,1)))
-             fact2(n) = if zero?(n) then 1 else *(n,(fact2 -(n,1)))
-     in (fact 6)"
-    )
-  (define src-rec-9
-    "letrec* even(x) = if zero?(x) then 1 else (odd -(x,1))
-             odd(x)  = if zero?(x) then 0 else (even -(x,1))
-        in (odd 13)"
-    )
   ;```````````````````````````````````````````````````````````
   
   ;;=========================================================== run
@@ -163,6 +153,8 @@ in (times4 3)
       ))
 
   ;  (run-tests)
+
+
   
   ;;=========================================================== Error src
   (define sx-0

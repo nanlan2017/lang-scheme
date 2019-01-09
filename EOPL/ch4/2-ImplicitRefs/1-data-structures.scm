@@ -1,6 +1,7 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  (require "lang.scm")
+  (require "0-lang.scm")
+  (require "1-store.scm")
   (require "utils.scm")
   ;============================================================ Inner Value
   (define-datatype ExpVal ExpVal?
@@ -11,11 +12,6 @@
     ($proc-val
      (p proc?))
     )
-
-  ;  (define-datatype DenVal DenVal?
-  ;    ($ref-val
-  ;     (i reference?))
-  ;    )
 
   ; expval -> number
   (define (expval->num expval)
@@ -49,7 +45,7 @@
      (var symbol?)
      (val Ref?)  ; ★ 
      (env Env?))
-    ($extend-env-rec
+    ($extend-env-rec*
      (p-name (list-of identifier?))
      (b-var (list-of identifier?))
      (body (list-of expression?))
@@ -70,7 +66,7 @@
                    (if (eqv? saved-var var)
                        saved-val
                        (apply-env saved-env var)))
-      ($extend-env-rec (pname-s bvar-s pbody-s saved-env)
+      ($extend-env-rec* (pname-s bvar-s pbody-s saved-env)
                        (let [(n (location var pname-s))]
                          (if n
                              (newref ($proc-val (list-ref bvar-s n) (list-ref pbody-s n) env))  ; 查找到这个procedure (ExpVal)
@@ -78,43 +74,10 @@
       ))
 
   ; $extend-env* :: [symbol] x [ExpVal] -> Env
-  (define ($extend-env* vars expvals env)
+  (define (extend-env* vars expvals env)
     (if (null? vars)
         env
         (let [(new-env ($extend-env (car vars) (car expvals) env))]
-          ($extend-env* (cdr vars) (cdr expvals) new-env))))
-  
-  ;============================================================  Store
-  ; type Ref = Integer
-  
-  (define STORE 'uninitialized-store)
-
-  (define (empty-store) '())
-
-  (define (get-store) STORE)
-
-  (define (initialize-store!)
-    (set! STORE (empty-store)))
-
-  (define Ref? integer?)
-
-  ; newref :: ExpVal -> Ref
-  (define (newref val)
-    (let [(next-ref (length STORE))]
-      (set! STORE (append STORE (list val)))
-      next-ref))
-
-  ; deref :: Ref -> ExpVal
-  (define (deref i)
-    (list-ref STORE i))
-
-  ; setref! :: Ref -> ExpVal -> ()
-  (define (setref! idx val)
-    (letrec [(setref-inner (lambda (sto i)
-                             (cond
-                               [(null? sto) (eopl:error "Invalid Reference!")]
-                               [(zero? i) (cons val (cdr sto))]
-                               [else (cons (car sto) (setref-inner (cdr sto) (- i 1)))])))]
-      (set! STORE (setref-inner STORE idx))))
+          (extend-env* (cdr vars) (cdr expvals) new-env))))
 
   )
