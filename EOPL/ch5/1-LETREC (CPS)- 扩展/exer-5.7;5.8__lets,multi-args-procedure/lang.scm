@@ -17,12 +17,15 @@
       (expression ("-" "(" expression "," expression ")")  diff-exp)
       (expression ("zero?" "(" expression ")") zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  if-exp)
-      (expression ("let" identifier "=" expression "in" expression) let-exp)
       
-      (expression ("proc" "(" identifier")" expression) proc-exp)
-      (expression ("(" expression expression ")") call-exp)
+      (expression ("lets" (separated-list identifier "=" expression ",") "in" expression) lets-exp)      
+      (expression ("proc" "(" (arbno identifier) ")" expression) proc-exp)
+      (expression ("(" expression (arbno expression) ")") call-exp)
       
       (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
+
+      (expression ("let2" identifier "=" expression "," identifier "=" expression "in" expression) let2-exp)
+      (expression ("list" "(" (separated-list expression ",") ")") list-exp)
       ))
       
   ;;================================================================== SLLGEN

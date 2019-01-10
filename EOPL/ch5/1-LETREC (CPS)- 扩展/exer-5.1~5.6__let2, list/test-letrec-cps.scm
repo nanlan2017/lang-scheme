@@ -38,12 +38,21 @@
   (define src-proc-3
     "let dec = proc (x) -(x,1) in (dec 5)"  ; rator : 求dec是可以的[dec -> ProcVal] env
     )
-  (define src-proc-4
-    "letproc dec = proc (x) -(x,1) in (dec 56)"
-    )
   (define src-proc-5                        ; 自然支持curry (我们的算法本就是recursive的,只要每种ExpVal对的上位置就行)
     "let f = proc (x) proc (y) -(x,y)
      in ((f 33) 4)"
     )
-
+  ;```````````````````````````````````````````````````````````
+  ; let2
+  (define src-let-1
+    "
+let2 a = 1,b=2
+in -(a,b)
+")
+  ; list
+  (define src-list-1  ; [-1,1,2,1]
+    "
+let2 a = 1,b=2
+in list(-(a,b),-(b,a),b,a)     
+")
   )

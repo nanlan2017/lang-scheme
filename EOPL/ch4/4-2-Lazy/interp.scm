@@ -15,10 +15,16 @@
   ; 'value-of-operand
   (define (decide-operand rand-exp env)
     (cases expression rand-exp
+      ; (f x)
       (var-exp (x)
                (let [(refv (apply-env env x))]
                  (eopl:printf "Invoking with argref: ~s , points to STORE :[~s] = ~s~n" x refv (deref refv))
                  refv))
+      ; (f (...))
+      (const-exp (n)
+                 (newref (eval exp env)))
+      (proc-exp (var body)
+                (newref (eval exp env)))
       (else (newref ($a-thunk rand-exp env))))) ; █████████
 
   ; eval-thunk :: Thunk -> ExpVal

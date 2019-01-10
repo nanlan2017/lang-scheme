@@ -47,85 +47,85 @@
      (cont Continuation?))        
     )
 
+  (define (end-cont) '())
+  
+  (define-datatype frame frame?
+    [zero1-frame]
+    
+    [let-exp-frame
+     [var identifier?]
+     [body expression?]
+     [saved-env Env?]]
+    
+    [if-test-frame
+     [exp2 expression?]
+     [exp3 expression?]
+     [saved-env Env?]]
+    
+    [diff1-frame
+     [exp2 expression?]
+     [saved-env Env?]]
+    [diff2-frame
+     [val1 ExpVal?]]
+    
+    [rator-frame
+     [rand expression?]
+     [saved-env Env?]]
+    [rand-frame
+     [val1 ExpVal?]])
+
   ; apply-cont :: Cont -> ExpVal -> FinalAnswer
-  (define (apply-cont k VALUE) ; val : 上一步的计算结果
+  (define (apply-cont k VALUE)                    ; val : 上一步的计算结果
     (cases Continuation k
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
                  VALUE)
       ($zero?-exp-cont (cont)
-                   (apply-cont cont ($bool-val (zero? (expval->num VALUE))))) ; VALUE : zero?(e)  中e的值
+                       (apply-cont cont ($bool-val (zero? (expval->num VALUE))))) 
       ($let-exp-cont (var body env cont)
-                     (eval/k body ($extend-env var VALUE env) cont))          ; VALUE : let x = e 中e的值
+                     (eval/k body ($extend-env var VALUE env) cont)) 
       ($if-test-cont (then-exp else-exp env cont)
-                     (if (expval->bool VALUE)                                 ; VALUE : if e ..   中e的值
+                     (if (expval->bool VALUE)                            
                          (eval/k then-exp env cont)
                          (eval/k else-exp env cont)))
       ($diff1-cont (e2 env cont)
-                   (eval/k e2 env ($diff2-cont VALUE cont)))                  ; VALUE : -(e1,e2)  中e1的值
+                   (eval/k e2 env ($diff2-cont VALUE cont)))             
       ($diff2-cont (v1 cont)
-                   (apply-cont cont ($num-val (- (expval->num v1) (expval->num VALUE))))); VALUE : -(e1,e2)  中e2的值
+                   (apply-cont cont ($num-val (- (expval->num v1) (expval->num VALUE)))))
       ($rator-cont (rand-exp env cont)
-                   (eval/k rand-exp env ($rand-cont VALUE cont)))             ; VALUE : (e1 e2)   中e1的值
+                   (eval/k rand-exp env ($rand-cont VALUE cont)))     
       ($rand-cont (f-expval cont)                                             
                   (let [(f (expval->proc f-expval))]
-                    (apply-procedure/k f VALUE cont)                          ; VALUE : (e1 e2)   中e2的值
-                    ; (apply-cont cont (apply-procedure f VALUE))
-                    ))                                        
+                    (apply-procedure/k f VALUE cont)))                                        
       ))  
   
-  ;;============================================================= eval  
-  ; █████████ 重写目标： 所有对 eval/k的调用都属于tail call (doesn't build control context)
-  ; █████████ f(x,cont)  !=  cont( f(x,end-cont) )
-  
+  ;;============================================================= eval    
   ; eval :: Expression x Env x Cont -> FinalAnswer
   (define (eval/k exp env cont)
     (cases expression exp
-      ;--------------------------------------------- no call on eval/k
       (const-exp (n)
                  (apply-cont cont ($num-val n)))
       (var-exp (x)
                (apply-cont cont (apply-env env x)))
       (proc-exp (var body)
                 (apply-cont cont ($proc-val ($procedure var body env))))
-      ;--------------------------------------------- 1 call on eval
-      ; letrec : the inner-'eval' is in the same cont as caller-eval      
-      ;      (letrec-exp (pid b-var p-body letrec-body)
-      ;                  (eval letrec-body ($extend-env-rec pid b-var p-body env)))
+      
       (letrec-exp (pid b-var p-body letrec-body)
                   (eval/k letrec-body ($extend-env-rec pid b-var p-body env) cont))
       
-      ; zero?-exp : eval --> [ expval->num >>= zero? >>= $bool-val ] --> cont      
-      ;      (zero?-exp (e1)
-      ;                 (let [(☗ (eval e1 env))]
-      ;                   ($bool-val (zero? (expval->num ☗)))))
       (zero?-exp (e1)
                  (eval/k e1 env ($zero?-exp-cont cont)))
-      ;--------------------------------------------- 2 call on eval
-      ;      (let-exp (var e1 body)
-      ;               (let [(☗ (eval e1 env))]
-      ;                 (eval body ($extend-env var ☗ env))))
+
       (let-exp (var e1 body)
                (eval/k e1 env ($let-exp-cont var body env cont)))
       
-      ;      (if-exp (e1 e2 e3)
-      ;              (if (expval->bool (eval e1 env))
-      ;                  (eval e2 env)
-      ;                  (eval e3 env)))
+
       (if-exp (e1 e2 e3)
               (eval/k e1 env ($if-test-cont e2 e3 env cont)))
       
-      ;      (diff-exp (e1 e2)
-      ;                (let [(num1 (expval->num (eval e1 env)))
-      ;                      (num2 (expval->num (eval e2 env)))]
-      ;                  ($num-val (- num1 num2))))
       (diff-exp (e1 e2)
                 (eval/k e1 env ($diff1-cont e2 env cont)))      
       
-      ;      (call-exp (rator rand)
-      ;                (let [(f (expval->proc (eval rator env)))
-      ;                      (arg (eval rand env))]
-      ;                  (apply-procedure f arg)))
       (call-exp (rator rand)
                 (eval/k rator env ($rator-cont rand env cont)))
       ))
@@ -140,8 +140,6 @@
   (define (interp src)
     (eval-program (scan&parse src)))
 
-  (define (pretty-interp src) 
-    (eopl:printf "--------------~n~s~n~n~n~s~n--------------" src (interp src)))
   (define run interp)
 
   )
