@@ -39,21 +39,7 @@
      (f-expval ExpVal?)
      (cont Continuation?))        
     )
-  ;;============================================================= env
-  ;; apply-env == look-up-env
-  (define (apply-env env var)
-    (cases Env env
-      ($empty-env ()
-                  (eopl:error 'apply-env "Didn't find in env while search : ~s" var))
-      ($extend-env (saved-var saved-val saved-env)
-                   (if (eqv? saved-var var)
-                       saved-val
-                       (apply-env saved-env var)))
-      ($extend-env-rec (p-name b-var p-body saved-env)
-                       (if (eqv? var p-name)
-                           ($proc-val ($procedure b-var p-body env))
-                           (apply-env saved-env var)))
-      ))  
+ 
   ; ***************************************************************************************
   ;        【将tail call的参数进行register-iazation、均变为无参函数 的一般模式】
   ;
@@ -69,9 +55,23 @@
   ; 引入5个shared variable
   (define %exp 'uninitialized)
   (define %env 'uninitialized)
+  
   (define %cont 'uninitialized)
   (define %val 'uninitialized)
+  
   (define %proc 'uninitialized)
+  
+  ; 另一种trampoline方式 : %pc 保存下一个需要执行的函数的地址
+  ;    某些步骤不是直接去进入下一个函数、而是把下一步放在pc、自身交回控制权给 driver
+  (define %PC #t)
+
+  (define (fire-driver)
+    (if %PC
+        (begin
+          (eopl:printf "[bouncing...]~n")
+          (%PC)
+          (fire-driver))
+        %val))
   
   ; apply-procedure/k : () -> FinalAnswer
   ; 【tail call】 : eval/k
@@ -88,7 +88,9 @@
     (cases Continuation %cont
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
-                 %val)
+                 (set! %PC #f)  ;█████
+                 ; %val
+                 )
       ($zero?-exp-cont (cont)
                        (set! %cont cont)
                        (set! %val ($bool-val (zero? (expval->num %val))))
@@ -123,7 +125,9 @@
                   (set! %cont cont)
                   (set! %proc (expval->proc f-expval))
                   (set! %val %val)   ; ?
-                  (====>apply-procedure/k))                                        
+                  ;(====>apply-procedure/k)
+                  (set! %PC ====>apply-procedure/k) ;█████
+                  )                                        
       ))  
    
   ; eval :: () -> FinalAnswer
@@ -172,7 +176,9 @@
                  (set! %cont ($end-cont))
                  (set! %exp expr)
                  (set! %env (init-env))
-                 (====>eval/k))))
+                 ;█████
+                 (set! %PC ====>eval/k)
+                 (fire-driver))))
   ; =============================================================  
   ; interp :: String -> ExpVal
   (define (interp src)

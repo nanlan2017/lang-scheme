@@ -39,33 +39,29 @@
      (f-expval ExpVal?)
      (cont Continuation?))        
     )  
-  ;=========================================================================================================
-  ; ░░░░░░ 什么也没改！就是给
-  ;                   1. eval-program 加了个 trampoline!!
-  ;                   2. 让apply-procedure/k返回一个 lambda () 值，而不是继续tail call
+  ;=========================================================================  type Bounce = ExpVal | () → Bounce
+  (define-datatype Bounce Bounce?                                   ; Bounce : 既能包含ExpVal的值、又能包含-可Wrap一个 ()->Bounce的函数即可
+    ($final
+     (val ExpVal?))
+    ($bounce
+     (p pair?))  ; (any,无参过程)
+    )
 
-
-  
-  ; trampoline = "calc-if-not-ended"
-  ; type Bounce = ExpVal | ()->Bounce
-  
-
-
-  
-  ; 参数是一次递归调用的结果值：若为ExpVal,则说明递归已结束； 否则是Thunk:进行下一次递归、继续判断...
-  ; 其实本来是一连串的连续跳转 ，                         eval -> apply-cont -> apply-procedure -> eval -> ....
-  ; 现在在其中的 apply-procedure 插入了一个 “暂停点”      eval -> apply-cont -> (-> apply-procedure -> eval -> ...) 
-  ; 所谓暂停点：是在这处终于不是继续tail call了，而是返回了一个value !!! (是一个无参的过程)
-
-
+  (define counter 0)
+  (define (update-counter)
+    (set! counter (+ 1 counter))
+    counter)
   
   ; trampoline :: Bounce -> FinalAnswer 
   (define (trampoline bounce)
-    (if (ExpVal? bounce)
-        bounce
-        (begin  ; █-█-█-█-█-█-█-█  如果是那个无参函数、则继续运算
-          (eopl:printf "[bouncing...] ~s~n" (car bounce))
-          (trampoline ((cdr bounce))))))
+    (cases Bounce bounce
+      ($final (val)
+              val)
+      ($bounce (pr)
+               (begin
+                 (eopl:printf "[bouncing...] ~s~n" (car pr))
+                 (trampoline ((cdr pr)))))))
+
   ;=============================================================
   ; 注意： tail call on eval/k ,所以其返回类型必然同 eval/k的返回类型一致
   ; apply-procedure :: Proc x Val x Cont -> Bounce
@@ -74,38 +70,38 @@
       (lambda (proc arg cont)
         (cases Proc proc
           ($procedure (param bodyexp env)
-                      (set! counter (+ 1 counter))
-                      ; █-█-█-█-█-█-█-█ 在此插入了一个 lambda (), 这就是能够暂停、返回值的bounce!
-                      (cons counter
-                            (lambda ()         
-                              (eval/k bodyexp ($extend-env param arg env) cont))))))))
+                      (set! counter (+ 1 counter))                      
+                      ($bounce (cons counter (lambda () ; ███
+                                               (eval/k bodyexp ($extend-env param arg env) cont)))))))))
   
   
   ; 注意： tail call on eval/k 或 apply-cont 或 apply-procedure/k
   ; apply-cont :: Cont x ExpVal -> Bounce
   (define (apply-cont k VAL)
-    (cases Continuation k
-      ($end-cont ()
-                 (eopl:printf "End of Computation.~%")
-                 VAL)
-      ($zero?-exp-cont (cont)
-                       (apply-cont cont ($bool-val (zero? (expval->num VAL)))))
-      ($let-exp-cont (var body env cont)
-                     (eval/k body ($extend-env var VAL env) cont))
-      ($if-test-cont (then-exp else-exp env cont)
-                     (if (expval->bool VAL)                     
-                         (eval/k then-exp env cont)
-                         (eval/k else-exp env cont)))
-      ($diff1-cont (e2 env cont)
-                   (eval/k e2 env ($diff2-cont VAL cont)))   
-      ($diff2-cont (v1 cont)
-                   (apply-cont cont ($num-val (- (expval->num v1) (expval->num VAL)))))
-      ($rator-cont (rand-exp env cont)
-                   (eval/k rand-exp env ($rand-cont VAL cont)))       
-      ($rand-cont (f-expval cont)                                             
-                  (let [(f (expval->proc f-expval))]
-                    (apply-procedure/k f VAL cont)))                                        
-      ))  
+    ($bounce (cons 'apply-cont (lambda () ; ███
+                                 (cases Continuation k
+                                   ($end-cont ()
+                                              (eopl:printf "End of Computation.~%")
+                                              ($final VAL)) ; █ █ █
+                                   ($zero?-exp-cont (cont)
+                                                    (apply-cont cont ($bool-val (zero? (expval->num VAL)))))
+                                   ($let-exp-cont (var body env cont)
+                                                  (eval/k body ($extend-env var VAL env) cont))
+                                   ($if-test-cont (then-exp else-exp env cont)
+                                                  (if (expval->bool VAL)                     
+                                                      (eval/k then-exp env cont)
+                                                      (eval/k else-exp env cont)))
+                                   ($diff1-cont (e2 env cont)
+                                                (eval/k e2 env ($diff2-cont VAL cont)))   
+                                   ($diff2-cont (v1 cont)
+                                                (apply-cont cont ($num-val (- (expval->num v1) (expval->num VAL)))))
+                                   ($rator-cont (rand-exp env cont)
+                                                (eval/k rand-exp env ($rand-cont VAL cont)))       
+                                   ($rand-cont (f-expval cont)                                             
+                                               (let [(f (expval->proc f-expval))]
+                                                 ($bounce (cons (update-counter) (lambda () ; ███
+                                                                                   (apply-procedure/k f VAL cont))))))                                        
+                                   )))))  
   
   ;============================================================= eval/k      
   ; 注意：均为对 apply-cont / eval/k 的tail call

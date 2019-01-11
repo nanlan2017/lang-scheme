@@ -50,7 +50,7 @@
      (env Env?))
     )
 
-  ;; apply-env == look-up-env
+   ;; apply-env == look-up-env
   (define (apply-env env var)
     (cases Env env
       ($empty-env ()
@@ -63,7 +63,7 @@
                        (if (eqv? var p-name)
                            ($proc-val ($procedure b-var p-body env))
                            (apply-env saved-env var)))
-      ))
+      ))  
 
   (define (init-env)
     ($extend-env 'i ($num-val 1)

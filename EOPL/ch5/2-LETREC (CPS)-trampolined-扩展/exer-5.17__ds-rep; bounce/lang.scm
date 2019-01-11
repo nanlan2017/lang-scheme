@@ -32,7 +32,6 @@
   (define just-scan
     (sllgen:make-string-scanner the-lexical-spec the-grammar))  
   (define scan&parse
-    (sllgen:make-string-parser the-lexical-spec the-grammar))
-  (define sp scan&parse)
+    (sllgen:make-string-parser the-lexical-spec the-grammar)) 
   
   )

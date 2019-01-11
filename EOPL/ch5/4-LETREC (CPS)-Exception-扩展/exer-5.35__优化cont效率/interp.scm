@@ -16,35 +16,42 @@
     ($end-cont)
     ; zero?-exp
     ($zero?-exp-cont
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ; let-exp
     ($let-exp-cont
      (var identifier?)
      (body expression?)
      (env Env?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ; if-exp
     ($if-test-cont
      (then-exp expression?)
      (else-exp expression?)
      (env Env?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ; diff-exp
     ($diff1-cont
      (e2 expression?)
      (env Env?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ($diff2-cont
      (v1 ExpVal?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ; call-exp
     ($rator-cont
      (rand-exp expression?)
      (env Env?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ($rand-cont
      (f-expval ExpVal?)
-     (cont Continuation?))
+     (cont Continuation?)
+     (saved-try-cont Continuation?))
     ; ███ Exception
     ($try-cont
      (cvar identifier?)
@@ -61,21 +68,27 @@
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
                  VAL)
-      ($zero?-exp-cont (cont)
+      ($zero?-exp-cont (cont saved-try-cont)
                        (apply-cont cont ($bool-val (zero? (expval->num VAL)))))
-      ($let-exp-cont (var body env cont)
-                     (eval/k body ($extend-env var VAL env) cont))    
-      ($if-test-cont (then-exp else-exp env cont)
+      
+      ($let-exp-cont (var body env cont saved-try-cont)
+                     (eval/k body ($extend-env var VAL env) cont))
+      
+      ($if-test-cont (then-exp else-exp env cont saved-try-cont)
                      (if (expval->bool VAL)                           
                          (eval/k then-exp env cont)
                          (eval/k else-exp env cont)))
-      ($diff1-cont (e2 env cont)
-                   (eval/k e2 env ($diff2-cont VAL cont)))              
-      ($diff2-cont (v1 cont)
+      
+      ($diff1-cont (e2 env cont saved-try-cont)
+                   (eval/k e2 env ($diff2-cont VAL cont (extract-try-cont cont))))
+      
+      ($diff2-cont (v1 cont saved-try-cont)
                    (apply-cont cont ($num-val (- (expval->num v1) (expval->num VAL)))))
-      ($rator-cont (rand-exp env cont)
-                   (eval/k rand-exp env ($rand-cont VAL cont)))         
-      ($rand-cont (f-expval cont)                                             
+      
+      ($rator-cont (rand-exp env cont saved-try-cont)
+                   (eval/k rand-exp env ($rand-cont VAL cont (extract-try-cont cont))))
+      
+      ($rand-cont (f-expval cont saved-try-cont)                                             
                   (let [(f (expval->proc f-expval))]
                     (apply-procedure/k f VAL cont)))                    
       ; Exception
@@ -87,31 +100,47 @@
 
   ; apply-handler :: ExpVal x Cont -> FinalAnswer
   ; ███ 核心就是认识到：cont是数据化的“计算”。通过模式匹配获取某些计算、你可以自由跳转计算
-  (define (apply-handler val k)
+  (define (apply-handler VAL k)
     (cases Continuation k
       ;
       ($try-cont (cvar handler-exp env cont)
-                 (eval/k handler-exp ($extend-env cvar val env) cont))
+                 (eval/k handler-exp ($extend-env cvar VAL env) cont))
       ($end-cont ()
-                 (eopl:error "======= Uncaught Exception!~s~n" val))
-      ;
-      ($zero?-exp-cont (cont)
-                       (apply-handler val cont))
-      ($let-exp-cont (var body env cont)
-                     (apply-handler val cont))
-      ($if-test-cont (then-exp else-exp env cont)
-                     (apply-handler val cont))
-      ($diff1-cont (e2 env cont)
-                   (apply-handler val cont))          
-      ($diff2-cont (v1 cont)
-                   (apply-handler val cont))
-      ($rator-cont (rand-exp env cont)
-                   (apply-handler val cont))
-      ($rand-cont (f-expval cont)                                             
-                  (apply-handler val cont))
+                 (eopl:error "======= Uncaught Exception!~s~n" VAL))
       ;
       ($raise1-cont (cont)
-                    (apply-handler val cont))
+                    (apply-handler VAL cont))
+      ;
+      ($zero?-exp-cont (cont saved-try-cont)
+                       (apply-handler VAL saved-try-cont))
+      ($let-exp-cont (var body env cont saved-try-cont)
+                     (apply-handler VAL saved-try-cont))
+      ($if-test-cont (then-exp else-exp env cont saved-try-cont)
+                     (apply-handler VAL saved-try-cont))
+      ($diff1-cont (e2 env cont saved-try-cont)
+                   (apply-handler VAL saved-try-cont))          
+      ($diff2-cont (v1 cont saved-try-cont)
+                   (apply-handler VAL saved-try-cont))
+      ($rator-cont (rand-exp env cont saved-try-cont)
+                   (apply-handler VAL saved-try-cont))
+      ($rand-cont (f-expval cont saved-try-cont)                                             
+                  (apply-handler VAL saved-try-cont))      
+      ))
+
+  (define (extract-try-cont k)
+    (cases Continuation k
+      ($try-cont (cvar handler-exp env cont) cont)
+      ($end-cont () k)
+      ;
+      ($raise1-cont (cont) cont)
+      ;
+      ($zero?-exp-cont (cont saved-try-cont) saved-try-cont)
+      ($let-exp-cont (var body env cont saved-try-cont) saved-try-cont)
+      ($if-test-cont (then-exp else-exp env cont saved-try-cont) saved-try-cont)
+      ($diff1-cont (e2 env cont saved-try-cont) saved-try-cont)          
+      ($diff2-cont (v1 cont saved-try-cont) saved-try-cont)
+      ($rator-cont (rand-exp env cont saved-try-cont) saved-try-cont)
+      ($rand-cont (f-expval cont saved-try-cont) saved-try-cont)      
       ))
     
   
@@ -125,18 +154,19 @@
                (apply-cont cont (apply-env env x)))
       (proc-exp (var body)
                 (apply-cont cont ($proc-val ($procedure var body env))))
+      ;
       (letrec-exp (pid b-var p-body letrec-body)
                   (eval/k letrec-body ($extend-env-rec pid b-var p-body env) cont))
       (zero?-exp (e1)
-                 (eval/k e1 env ($zero?-exp-cont cont)))
+                 (eval/k e1 env ($zero?-exp-cont cont (extract-try-cont cont))))
       (let-exp (var e1 body)
-               (eval/k e1 env ($let-exp-cont var body env cont)))
+               (eval/k e1 env ($let-exp-cont var body env cont (extract-try-cont cont))))
       (if-exp (e1 e2 e3)
-              (eval/k e1 env ($if-test-cont e2 e3 env cont)))
+              (eval/k e1 env ($if-test-cont e2 e3 env cont (extract-try-cont cont))))
       (diff-exp (e1 e2)
-                (eval/k e1 env ($diff1-cont e2 env cont)))      
+                (eval/k e1 env ($diff1-cont e2 env cont (extract-try-cont cont))))      
       (call-exp (rator rand)
-                (eval/k rator env ($rator-cont rand env cont)))
+                (eval/k rator env ($rator-cont rand env cont (extract-try-cont cont))))
       
       ; Exception Handling
       (try-exp (exp1 cvar handler-exp)
