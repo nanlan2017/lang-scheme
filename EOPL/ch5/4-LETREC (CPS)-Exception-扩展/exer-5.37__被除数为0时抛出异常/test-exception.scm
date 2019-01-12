@@ -43,5 +43,17 @@ catch(e)
           -(x,1)
   in ((index 5) list(2, 3))  
 ")
+  ;````````````````````
+  (define src-4
+    "
+let f3 = proc (x y z) if x then y else z
+in (f3 zero?(1) 4 7)
+")
+  
+  (define src-5
+    "
+let f3 = proc (x y z) if x then y else z
+in (f3 zero?(1) 4)
+")
 
   )

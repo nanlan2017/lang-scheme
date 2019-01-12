@@ -14,14 +14,14 @@
       ;------------------------- Expression -------------------------------
       (expression (number) const-exp)
       (expression (identifier) var-exp)
-      (expression ("proc" "(" identifier")" expression) proc-exp)
+      (expression ("proc" "(" (arbno identifier)")" expression) proc-exp)
       (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
       (expression ("list" "(" (separated-list number ",") ")") const-list-exp)
       
       (expression ("-" "(" expression "," expression ")")  diff-exp)      
       (expression ("if" expression "then" expression "else" expression)  if-exp)
       (expression ("let" identifier "=" expression "in" expression) let-exp)            
-      (expression ("(" expression expression ")") call-exp)
+      (expression ("(" expression (arbno expression) ")") call-exp)
       (expression (unary-op "(" expression ")") unary-op-exp)
 
       ; Exception Handling

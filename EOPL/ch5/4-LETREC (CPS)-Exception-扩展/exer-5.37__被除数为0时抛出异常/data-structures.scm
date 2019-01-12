@@ -41,7 +41,7 @@
   ;;====================================== Proc (采用datatype 表示法)
   (define-datatype Proc Proc?
     ($procedure
-     (var identifier?)
+     (vars (list-of identifier?))
      (body expression?)
      (env Env?)))   
   ;;====================================== Env (采用datatype 表示法)

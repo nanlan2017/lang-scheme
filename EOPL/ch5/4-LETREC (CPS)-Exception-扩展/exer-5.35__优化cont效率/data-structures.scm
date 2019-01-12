@@ -10,6 +10,8 @@
      (v boolean?))
     ($proc-val
      (p Proc?))
+    ($list-val
+     (vals (list-of ExpVal?)))
     )
 
   ;; expval -> number
@@ -29,6 +31,12 @@
     (cases ExpVal expval
       ($proc-val (p) p)
       (else (eopl:error "Can't get proc-val from ExpVal :" expval))
+      ))
+  ;; expval -> List
+  (define (expval->list expval)
+    (cases ExpVal expval
+      ($list-val (vs) vs)
+      (else (eopl:error "Can't get list-val from ExpVal :" expval))
       ))
   ;;====================================== Proc (采用datatype 表示法)
   (define-datatype Proc Proc?

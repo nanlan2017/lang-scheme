@@ -14,18 +14,24 @@
       ;------------------------- Expression -------------------------------
       (expression (number) const-exp)
       (expression (identifier) var-exp)
-      (expression ("-" "(" expression "," expression ")")  diff-exp)
-      (expression ("zero?" "(" expression ")") zero?-exp)
-      (expression ("if" expression "then" expression "else" expression)  if-exp)
-      (expression ("let" identifier "=" expression "in" expression) let-exp)
-      
       (expression ("proc" "(" identifier")" expression) proc-exp)
-      (expression ("(" expression expression ")") call-exp)
-
       (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression) letrec-exp)
+      (expression ("list" "(" (separated-list number ",") ")") const-list-exp)
+      
+      (expression ("-" "(" expression "," expression ")")  diff-exp)      
+      (expression ("if" expression "then" expression "else" expression)  if-exp)
+      (expression ("let" identifier "=" expression "in" expression) let-exp)            
+      (expression ("(" expression expression ")") call-exp)
+      (expression (unary-op "(" expression ")") unary-op-exp)
+
       ; Exception Handling
       (expression ("try" expression "catch" "(" identifier ")" expression) try-exp)
       (expression ("raise" expression) raise-exp)
+      ; -------------------------
+      (unary-op ("zero?") zero?-op)
+      (unary-op ("null?") null?-op)
+      (unary-op ("car") car-op)
+      (unary-op ("cdr") cdr-op)
       ))
       
   ;;================================================================== SLLGEN
