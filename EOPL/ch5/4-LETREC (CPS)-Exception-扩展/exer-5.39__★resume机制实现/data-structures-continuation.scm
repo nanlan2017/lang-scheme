@@ -49,5 +49,11 @@
      (rand-exp-s (list-of expression?))
      (env Env?)
      (cont Continuation?))
-    )
+
+    ; begin
+    ($begin-cont
+     (exps (list-of expression?))
+     (env Env?)
+     (cont Continuation?))
+    )  
   )

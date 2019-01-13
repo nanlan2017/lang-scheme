@@ -93,7 +93,7 @@
       ($rator-cont (rand-exps env cont)
                    (let [(f (expval->proc VAL))]
                      (cases Proc f
-                       ($procedure (params body env)
+                       ($procedure (params body saved-env)
                                    (if (not (= (length params) (length rand-exps)))
                                        ; raise exception
                                        (apply-handler "Exception: arity doen't match!" cont)

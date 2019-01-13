@@ -33,49 +33,53 @@
 
 
   ; apply-handler :: ExpVal x Cont -> FinalAnswer
-  ; ███ 核心就是认识到：cont是数据化的“计算”。通过模式匹配获取某些计算、你可以自由跳转计算
-  (define (apply-handler val k)
+  (define (apply-handler val k spot-cont)
     (cases Continuation k
       ;
       ($end-cont ()
                  (eopl:error "======= Uncaught Exception! ========" val))
       
       ($try-cont (cvar handler-exp env cont)       ; 该cont是try语句的cont; 可同时包含 raise语句的cont
-                 (eval/k handler-exp ($extend-env cvar val env) cont))
+                 (eval/k handler-exp ($extend-env cvar val env)
+                         ; cont
+                         spot-cont
+                         ))
 
       
       ($raise1-cont (cont)
-                    (apply-handler val cont))
+                    (apply-handler val cont spot-cont))
       
       ;```````````````````````````````
       ($unary-arg-cont (op cont)
-                       (apply-handler val cont))
+                       (apply-handler val cont spot-cont))
       ($if-test-cont (then-exp else-exp env cont)
-                     (apply-handler val cont))
+                     (apply-handler val cont spot-cont))
       ($diff1-cont (e2 env cont)
-                   (apply-handler val cont))          
+                   (apply-handler val cont spot-cont))          
       ($diff2-cont (v1 cont)
-                   (apply-handler val cont))
+                   (apply-handler val cont spot-cont))
       ($rator-cont (rand-exps env cont)
-                   (apply-handler val cont))
+                   (apply-handler val cont spot-cont))
       ($rands-cont (f vals exps env cont)                                             
-                   (apply-handler val cont))
+                   (apply-handler val cont spot-cont))
+      ($begin-cont (exps env cont)
+                   (apply-handler val cont spot-cont))
       
       ))
 
   ;;============================================================= Cont
   ; apply-cont :: Cont -> ExpVal -> FinalAnswer
-  (define (apply-cont k VAL)                            ; val : 上一步的计算结果
+  (define (apply-cont k VAL)
     (cases Continuation k
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
                  VAL)          
 
       ($try-cont (cvar handler-exp env cont)
-                 (apply-cont cont VAL))       ; "If the body returns normally, then VAL should be sent to the continuation of try-exp : namely 'cont'"
+                 (apply-cont cont VAL))
       ($raise1-cont (cont)
-                    (apply-handler VAL cont)) ; 如果raise-exp被求值了,说明已经触发了异常,需要把抛出的VAL发送给cont中nearest的 handler-proc
-      ; `````````````````````````````````
+                    (apply-handler VAL cont cont))         ; 目标：把raise处的cont要传到handler,以作为handler-exp的cont
+      ; ``````````````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
                      (if (expval->bool VAL)                           
@@ -85,21 +89,13 @@
       ($diff1-cont (e2 env cont)
                    (eval/k e2 env ($diff2-cont VAL cont)))              
       ($diff2-cont (v1 cont)
-                   (if (> (expval->num VAL) 1000)
-                       ; raise exception
-                       (apply-handler "Exception: minus bigger than 1000" cont)
-                       (apply-cont cont ($num-val (- (expval->num v1) (expval->num VAL))))))
+                   (apply-cont cont ($num-val (- (expval->num v1) (expval->num VAL)))))
       ; call-exp
       ($rator-cont (rand-exps env cont)
                    (let [(f (expval->proc VAL))]
-                     (cases Proc f
-                       ($procedure (params body env)
-                                   (if (not (= (length params) (length rand-exps)))
-                                       ; raise exception
-                                       (apply-handler "Exception: arity doen't match!" cont)
-                                       (if (null? rand-exps)
-                                           (apply-procedure/k f '())
-                                           (eval/k (car rand-exps) env ($rands-cont f '() (cdr rand-exps) env cont))))))))
+                     (if (null? rand-exps)
+                         (apply-procedure/k f '())
+                         (eval/k (car rand-exps) env ($rands-cont f '() (cdr rand-exps) env cont)))))
       
       ($rands-cont (f randvals left-exps env cont)
                    (let [(acc (append randvals (list VAL)))]
@@ -110,6 +106,11 @@
       ; unaryop
       ($unary-arg-cont (op cont)
                        (apply-cont cont (apply-unary-op op VAL)))
+      ; begin
+      ($begin-cont (exps env cont)
+                   (if (null? exps)
+                       (apply-cont cont VAL)
+                       (eval/k (car exps) env ($begin-cont (cdr exps) env cont))))
       ))
     
   
@@ -138,13 +139,22 @@
                 (eval/k rator env ($rator-cont rands env cont)))
       (unary-op-exp (unary-op exp)
                     (eval/k exp env ($unary-arg-cont unary-op cont)))
+
+      ; ----------------
+      (begin-exp (e1 exps)        ;  eval e1 \v1-> eval e2 \v2 -> eval ei \vi -> vi
+                 (eval/k e1 env ($begin-cont exps env cont)))
+                 
+      (print-num-exp (n)
+                     (eopl:printf "______print____~s~n" n)
+                     (apply-cont cont ($num-val 10000)))
       
-      ; Exception Handling
+      ; ----------------
       (try-exp (exp1 cvar handler-exp)
                (eval/k exp1 env ($try-cont cvar handler-exp env cont)))
       
       (raise-exp (exp1)
                  (eval/k exp1 env ($raise1-cont cont)))
+                 
       ))
 
   ; eval-program :: Program -> FinalAnswer

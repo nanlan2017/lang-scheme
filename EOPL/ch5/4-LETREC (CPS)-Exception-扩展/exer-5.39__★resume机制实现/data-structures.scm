@@ -67,9 +67,9 @@
                    (if (eqv? saved-var var)
                        saved-val
                        (apply-env saved-env var)))
-      ($extend-env-rec (p-name b-var p-body saved-env)
+      ($extend-env-rec (p-name b-var p-body saved-env)                       
                        (if (eqv? var p-name)
-                           ($proc-val ($procedure b-var p-body env))
+                           ($proc-val ($procedure (list b-var) p-body env))
                            (apply-env saved-env var)))
       ))
 

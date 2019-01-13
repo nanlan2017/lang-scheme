@@ -3,7 +3,7 @@
   
   (define the-lexical-spec
     '((whitespace (whitespace) skip)      
-      (comment ("%" (arbno (not #\newline)))skip)
+      (comment ("%" (arbno (not #\newline))) skip)
       (identifier (letter (arbno (or letter digit "_" "-" "?"))) symbol)
       (number (digit (arbno digit)) number)
       (number ("-" digit (arbno digit)) number)
@@ -23,6 +23,9 @@
       (expression ("let" identifier "=" expression "in" expression) let-exp)            
       (expression ("(" expression (arbno expression) ")") call-exp)
       (expression (unary-op "(" expression ")") unary-op-exp)
+
+      (expression ("begin" expression (arbno ";" expression) "end") begin-exp)
+      (expression ("print" number) print-num-exp)
 
       ; Exception Handling
       (expression ("try" expression "catch" "(" identifier ")" expression) try-exp)
