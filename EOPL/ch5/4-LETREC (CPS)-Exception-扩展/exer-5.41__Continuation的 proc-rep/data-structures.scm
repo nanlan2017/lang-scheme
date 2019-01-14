@@ -1,8 +1,7 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "lang.scm")
-
-
+  
   (define identifier? symbol?)
   ;;====================================== Expressed Value | Denoted Value
   (define-datatype ExpVal ExpVal?
@@ -76,9 +75,7 @@
       ))
 
   (define (init-env)
-    ($extend-env 'i ($num-val 1)
-                 ($extend-env 'v ($num-val 5)
-                              ($extend-env 'x ($num-val 10) ($empty-env)))))
+    ($empty-env))
 
   ; extend-env* :: [symbol] x [ExpVal] x Env -> Env
   (define (extend-env* vars expvals env)
@@ -86,49 +83,57 @@
         env
         (let [(new-env ($extend-env (car vars) (car expvals) env))]
           (extend-env* (cdr vars) (cdr expvals) new-env))))
+  
+  ;  ;;====================================== Continuation
+  ;  (define-datatype Continuation Continuation?
+  ;    ($end-cont)
+  ;
+  ;    ; Exception
+  ;    ($try-cont
+  ;     (cvar identifier?)
+  ;     (contvar identifier?)
+  ;     (handler-exp expression?)
+  ;     (env Env?)
+  ;     (cont Continuation?))
+  ;    
+  ;    ($raise1-cont
+  ;     (cont Continuation?))
+  ;    ;````````````````````````````````
+  ;    ; unary : zero? | null? car cdr
+  ;    ($unary-arg-cont
+  ;     (op unary-op?)
+  ;     (cont Continuation?))
+  ;    
+  ;    ; if-exp
+  ;    ($if-test-cont
+  ;     (then-exp expression?)
+  ;     (else-exp expression?)
+  ;     (env Env?)
+  ;     (cont Continuation?))
+  ;    
+  ;    ; diff-exp
+  ;    ($diff1-cont
+  ;     (e2 expression?)
+  ;     (env Env?)
+  ;     (cont Continuation?))
+  ;    ($diff2-cont
+  ;     (v1 ExpVal?)
+  ;     (cont Continuation?))
+  ;    
+  ;    ; call-exp
+  ;    ($rator-cont
+  ;     (rand-exp expression?)
+  ;     (env Env?)
+  ;     (cont Continuation?))
+  ;    ($rand-cont
+  ;     (ratorval ExpVal?)   ; (c x) 可能是函数应用，也可能是contination应用
+  ;     (cont Continuation?))    
+  ;    )
 
-  ;;====================================== Continuation
-  (define-datatype Continuation Continuation?
-    ($end-cont)
 
-    ; Exception
-    ($try-cont
-     (cvar identifier?)
-     (handler-exp expression?)
-     (env Env?)
-     (cont Continuation?))
-    ($raise1-cont
-     (cont Continuation?))
-    ;````````````````````````````````
-    ; unary : zero? | null? car cdr
-    ($unary-arg-cont
-     (op unary-op?)
-     (cont Continuation?))
-    
-    ; if-exp
-    ($if-test-cont
-     (then-exp expression?)
-     (else-exp expression?)
-     (env Env?)
-     (cont Continuation?))
-    
-    ; diff-exp
-    ($diff1-cont
-     (e2 expression?)
-     (env Env?)
-     (cont Continuation?))
-    ($diff2-cont
-     (v1 ExpVal?)
-     (cont Continuation?))
-    
-    ; call-exp
-    ($rator-cont
-     (rand-exp expression?)
-     (env Env?)
-     (cont Continuation?))
-    ($rand-cont
-     (f-expval ExpVal?)
-     (cont Continuation?))
-    )
 
+
+
+
+  
   )

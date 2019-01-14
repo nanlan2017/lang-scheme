@@ -2,7 +2,6 @@
   (provide (all-defined-out))
   (require "lang.scm")
 
-
   (define identifier? symbol?)
   ;;====================================== Expressed Value | Denoted Value
   (define-datatype ExpVal ExpVal?
@@ -14,6 +13,8 @@
      (p Proc?))
     ($list-val
      (vals (list-of ExpVal?)))
+    ($cont-val
+     (ct Continuation?))
     )
 
   ;; expval -> number
@@ -39,6 +40,13 @@
     (cases ExpVal expval
       ($list-val (vs) vs)
       (else (eopl:error "Can't get list-val from ExpVal :" expval))
+      ))
+
+  ;; expval -> Cont
+  (define (expval->cont expval)
+    (cases ExpVal expval
+      ($cont-val (ct) ct)
+      (else (eopl:error "Can't get cont-val from ExpVal :" expval))
       ))
   ;;====================================== Proc (采用datatype 表示法)
   (define-datatype Proc Proc?
@@ -98,6 +106,14 @@
      (env Env?)
      (cont Continuation?))
     ($raise1-cont
+     (cont Continuation?))
+
+    ($throw-val-cont
+     (exp expression?)
+     (env Env?)
+     (cont Continuation?))
+    ($throw-k-cont
+     (val ExpVal?)
      (cont Continuation?))
     ;````````````````````````````````
     ; unary : zero? | null? car cdr

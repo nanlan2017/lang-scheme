@@ -70,13 +70,42 @@ let a = 1001
 in -(x,a)      % 减数大于1000时，抛异常
 ")
   ;````````````````````
-  (define src-7
+  (define src-beg-0
+    "
+begin
+  print 1 ;
+  print 2 ;
+  7
+end
+")
+  ;===================================================================================
+  (define src-resume-0    ; (num-val -2)
+    "try -(3, raise 5)
+                    catch (x) 5")
+  
+  (define src-resume-1    ; (num-val -4)
+    "try
+         try
+           -(3, raise 5)
+         catch (x)
+           raise 7           % ██████raise 7 提供的 7 会回到 resume 处的  -(3,##) 处， 得到 3-7=-4 作为 内部try-catch语句的结果！
+     catch (y)
+           y
+    ")
+ 
+  ;  > (run src-7)
+  ;  ______print____1111111
+  ;  ______print____2222222
+  ;  End of Computation.
+  ;  ($num-val 10002)
+  ;  > 
+  (define src-7               ; print-exp 的值固定为 10000
     "
   let index = proc (n)
                 letrec inner (lst)
                              = if null?(lst)
                                   then begin
-                                          raise 99 ;
+                                          raise 99 ;           %███raise-exp的cont为第三次inner cdr(lst) 的cont, 即+1、+1返回
                                           print 2222222
                                        end
                                   else if zero?(-(car(lst),n))
@@ -92,4 +121,5 @@ in -(x,a)      % 减数大于1000时，抛异常
                            end
   in ((index 5) list(2, 3))  
 ")
+
   )

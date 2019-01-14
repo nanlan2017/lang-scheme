@@ -55,6 +55,15 @@
       
       (raise-exp (exp1)
                  (eval/k exp1 env ($raise1-cont cont)))
+
+      (letcc-exp (var bodyexp)
+                 (eval/k bodyexp ($extend-env var ($cont-val cont) env) cont))
+
+      (throw-exp (exp cont-exp)
+                 (eval/k exp env ($throw-val-cont cont-exp env cont)))
+      ; ░░░░░░░░░░ call/cc   | cont 就是 current-continuation
+      (call/cc-exp (var expression)
+                   (eval/k expression ($extend-env var ($cont-val cont) env) cont))
       ))
 
   ;;============================================================= Cont
@@ -69,6 +78,12 @@
                  (apply-cont cont VAL))  
       ($raise1-cont (cont)
                     (apply-handler VAL cont))
+
+      ($throw-val-cont (cont-exp env cont)
+                       (eval/k cont-exp env ($throw-k-cont VAL cont)))
+      ($throw-k-cont (val cont)
+                     (apply-cont (expval->cont VAL) val))
+      
       ; `````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
@@ -83,8 +98,15 @@
       ; call-exp
       ($rator-cont (rand-exp env cont)
                    (eval/k rand-exp env ($rand-cont VAL cont)))         
-      ($rand-cont (f-expval cont)                                             
-                  (apply-procedure/k (expval->proc f-expval) VAL cont))
+      ($rand-cont (ratorval cont)
+                  (cases ExpVal ratorval
+                    ($proc-val (f)
+                               (apply-procedure/k f VAL cont))
+                    ($cont-val (ct)   ; ░░░░░░░░░░
+                               (eopl:printf "   ████ Feeding Continuation : ~s ~n   with Value : ~s ~n" ct VAL)
+                               (apply-cont ct VAL))
+                    (else (eopl:error "Expected procedure/ continuation at (rator rand)"))
+                    ))
       ; unaryop
       ($unary-arg-cont (op cont)
                        (apply-cont cont (apply-unary-op op VAL)))
@@ -98,8 +120,15 @@
                  (eopl:error "======= Uncaught Exception!~s~n" val))
       ($try-cont (cvar handler-exp env cont)
                  (eval/k handler-exp ($extend-env cvar val env) cont))
+
+      ; ---------
       ($raise1-cont (cont)
                     (apply-handler val cont))
+
+      ($throw-val-cont (cont-exp env cont)
+                       (apply-handler val cont))
+      ($throw-k-cont (val cont)
+                     (apply-handler val cont))
       
       ;```````````````````````````````
       ($unary-arg-cont (op cont)

@@ -55,6 +55,12 @@
       
       (raise-exp (exp1)
                  (eval/k exp1 env ($raise1-cont cont)))
+
+      (letcc-exp (var bodyexp)
+                 (eval/k bodyexp ($extend-env var ($cont-val cont) env) cont))
+
+      (throw-exp (exp cont-exp)
+                 (eval/k exp env ($throw-val-cont cont-exp env cont)))
       ))
 
   ;;============================================================= Cont
@@ -69,6 +75,11 @@
                  (apply-cont cont VAL))  
       ($raise1-cont (cont)
                     (apply-handler VAL cont))
+
+      ($throw-val-cont (cont-exp env cont)
+                   (eval/k cont-exp env ($throw-k-cont VAL cont)))
+      ($throw-k-cont (val cont)
+                     (apply-cont (expval->cont VAL) val))
       ; `````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
@@ -98,8 +109,15 @@
                  (eopl:error "======= Uncaught Exception!~s~n" val))
       ($try-cont (cvar handler-exp env cont)
                  (eval/k handler-exp ($extend-env cvar val env) cont))
+
+      ; ---------
       ($raise1-cont (cont)
                     (apply-handler val cont))
+
+      ($throw-val-cont (cont-exp env cont)
+                       (apply-handler val cont))
+      ($throw-k-cont (val cont)
+                     (apply-handler val cont))
       
       ;```````````````````````````````
       ($unary-arg-cont (op cont)

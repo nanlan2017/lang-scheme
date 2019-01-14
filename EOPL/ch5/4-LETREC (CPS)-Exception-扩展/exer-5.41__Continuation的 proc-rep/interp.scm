@@ -22,8 +22,65 @@
       (cdr-op ()
               ($list-val (cdr (expval->list val))))
       ))
-  ;——————————————————————————————————————————————————————————————————————————————————————————————————————————
-  ;;============================================================= eval    
+
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+  (define ($end-cont)
+    (cons (lambda (val)
+            val)
+          (lambda (val)
+            (eopl:error 'apply-handler "uncaught exception!"))))
+  ;````````````````````````
+  (define ($try-cont var handler-exp env cont)
+    (let ([handler (lambda (val)
+                     (eval/k handler-exp ($extend-env var val env) cont))])
+      (cons (lambda (val)
+              (apply-cont (cons (car cont) handler) val))
+            handler)))
+
+  (define ($raise1-cont saved-cont)
+    (cons (cdr saved-cont)
+          (cdr saved-cont)))
+  ;````````````````````````
+  ; diff
+  (define ($diff1-cont exp2 env cont)
+    (cons (lambda (val)
+            (eval/k exp2 env (diff2-cont val cont)))
+          (cdr cont)))
+
+  (define ($diff2-cont val1 cont)
+    (cons (lambda (val)
+            (let ([n1 (expval->num val1)]
+                  [n2 (expval->num val)])
+              (apply-cont cont ($num-val (- n1 n2)))))
+          (cdr cont)))
+  ; unary-op
+  (define ($unary-arg-cont unop cont)
+    (cons (lambda (val)
+            (apply-cont cont (apply-unary-op unop val)))
+          (cdr cont)))
+  ; if-exp
+  (define (if-test-cont exp2 exp3 env cont)
+    (cons (lambda (val)
+            (if (expval->bool val)
+                (eval/k exp2 env cont)
+                (eval/k exp3 env cont)))
+          (cdr cont)))
+  ; call-exp
+  (define ($rator-cont rand env cont)
+    (cons (lambda (val)
+            (eval/k rand env (rand-cont val cont)))
+          (cdr cont)))
+
+  (define ($rand-cont val1 cont)
+    (cons (lambda (val)
+            (let ([proc (expval->proc val1)])
+              (apply-procedure/k proc val cont)))
+          (cdr cont)))
+
+
+  ; ___________________________________________________________________________________________________________
+ 
   ; eval :: Expression x Env x Cont -> FinalAnswer
   (define (eval/k exp env cont)
     (cases expression exp
@@ -50,25 +107,23 @@
                     (eval/k exp env ($unary-arg-cont unary-op cont)))
       
       ; Exception Handling
-      (try-exp (exp1 cvar handler-exp)
-               (eval/k exp1 env ($try-cont cvar handler-exp env cont)))
+      (try-exp (exp1 cvar contvar handler-exp)
+               (eval/k exp1 env ($try-cont cvar contvar handler-exp env cont)))
       
       (raise-exp (exp1)
                  (eval/k exp1 env ($raise1-cont cont)))
       ))
 
-  ;;============================================================= Cont
-  ; apply-cont :: Cont -> ExpVal -> FinalAnswer
-  (define (apply-cont k VAL)                     
+   ; apply-cont :: Cont -> ExpVal -> FinalAnswer
+  (define (apply-cont k VAL) 
     (cases Continuation k
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
                  VAL)          
-
-      ($try-cont (cvar handler-exp env cont)
+      ($try-cont (cvar contvar handler-exp env cont)
                  (apply-cont cont VAL))  
       ($raise1-cont (cont)
-                    (apply-handler VAL cont))
+                    (apply-handler VAL cont cont))
       ; `````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
@@ -83,46 +138,28 @@
       ; call-exp
       ($rator-cont (rand-exp env cont)
                    (eval/k rand-exp env ($rand-cont VAL cont)))         
-      ($rand-cont (f-expval cont)                                             
-                  (apply-procedure/k (expval->proc f-expval) VAL cont))
+      ($rand-cont (ratorval cont)
+                  (cases ExpVal ratorval
+                    ($proc-val (f)
+                               (apply-procedure/k f VAL cont))
+                    ($cont-val (ct)
+                               (apply-cont ct VAL))   ; ████████████
+                    (else (eopl:error "Operator of Call-exp Must be either a procedure or a continuation"))
+                    ))
       ; unaryop
       ($unary-arg-cont (op cont)
                        (apply-cont cont (apply-unary-op op VAL)))
       ))
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
 
-  ; apply-handler :: ExpVal x Cont -> FinalAnswer
-  (define (apply-handler val k)
-    (cases Continuation k
-      ;
-      ($end-cont ()
-                 (eopl:error "======= Uncaught Exception!~s~n" val))
-      ($try-cont (cvar handler-exp env cont)
-                 (eval/k handler-exp ($extend-env cvar val env) cont))
-      ($raise1-cont (cont)
-                    (apply-handler val cont))
-      
-      ;```````````````````````````````
-      ($unary-arg-cont (op cont)
-                       (apply-handler val cont))
-      ($if-test-cont (then-exp else-exp env cont)
-                     (apply-handler val cont))
-      ($diff1-cont (e2 env cont)
-                   (apply-handler val cont))          
-      ($diff2-cont (v1 cont)
-                   (apply-handler val cont))
-      ($rator-cont (rand-exp env cont)
-                   (apply-handler val cont))
-      ($rand-cont (f-expval cont)                                             
-                  (apply-handler val cont))
-      
-      ))
-  ; =============================================================
   ; eval-program :: Program -> FinalAnswer
   (define (eval-program prog)
     (cases program prog
       (a-program (expr)
                  (eval/k expr (init-env) ($end-cont)))))
-    
+  ; =============================================================  
   ; interp :: String -> ExpVal
   (define (interp src)
     (eval-program (scan&parse src)))

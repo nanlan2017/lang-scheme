@@ -22,8 +22,11 @@
       (cdr-op ()
               ($list-val (cdr (expval->list val))))
       ))
-  ;——————————————————————————————————————————————————————————————————————————————————————————————————————————
-  ;;============================================================= eval    
+
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+ 
   ; eval :: Expression x Env x Cont -> FinalAnswer
   (define (eval/k exp env cont)
     (cases expression exp
@@ -50,8 +53,8 @@
                     (eval/k exp env ($unary-arg-cont unary-op cont)))
       
       ; Exception Handling
-      (try-exp (exp1 cvar handler-exp)
-               (eval/k exp1 env ($try-cont cvar handler-exp env cont)))
+      (try-exp (exp1 cvar contvar handler-exp)
+               (eval/k exp1 env ($try-cont cvar contvar handler-exp env cont)))
       
       (raise-exp (exp1)
                  (eval/k exp1 env ($raise1-cont cont)))
@@ -59,16 +62,15 @@
 
   ;;============================================================= Cont
   ; apply-cont :: Cont -> ExpVal -> FinalAnswer
-  (define (apply-cont k VAL)                     
+  (define (apply-cont k VAL) 
     (cases Continuation k
       ($end-cont ()
                  (eopl:printf "End of Computation.~%")
                  VAL)          
-
-      ($try-cont (cvar handler-exp env cont)
+      ($try-cont (cvar contvar handler-exp env cont)
                  (apply-cont cont VAL))  
       ($raise1-cont (cont)
-                    (apply-handler VAL cont))
+                    (apply-handler VAL cont cont))
       ; `````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
@@ -83,46 +85,58 @@
       ; call-exp
       ($rator-cont (rand-exp env cont)
                    (eval/k rand-exp env ($rand-cont VAL cont)))         
-      ($rand-cont (f-expval cont)                                             
-                  (apply-procedure/k (expval->proc f-expval) VAL cont))
+      ($rand-cont (ratorval cont)
+                  (cases ExpVal ratorval
+                    ($proc-val (f)
+                               (apply-procedure/k f VAL cont))
+                    ($cont-val (ct)
+                               (apply-cont ct VAL))   ; ████████████
+                    (else (eopl:error "Operator of Call-exp Must be either a procedure or a continuation"))
+                    ))
       ; unaryop
       ($unary-arg-cont (op cont)
                        (apply-cont cont (apply-unary-op op VAL)))
       ))
-
+  
   ; apply-handler :: ExpVal x Cont -> FinalAnswer
-  (define (apply-handler val k)
+  (define (apply-handler VAL k resume-cont)
     (cases Continuation k
-      ;
       ($end-cont ()
-                 (eopl:error "======= Uncaught Exception!~s~n" val))
-      ($try-cont (cvar handler-exp env cont)
-                 (eval/k handler-exp ($extend-env cvar val env) cont))
-      ($raise1-cont (cont)
-                    (apply-handler val cont))
-      
+                 (eopl:error "======= Uncaught Exception!~s~n" VAL))
+      ($try-cont (cvar contvar handler-exp env cont)         
+                 (eval/k handler-exp
+                         (extend-env* (list cvar contvar) (list VAL ($cont-val resume-cont)) env)  ; ██████
+                         cont))
       ;```````````````````````````````
+      ($raise1-cont (cont)
+                    (apply-handler VAL cont resume-cont))
+      
+      
       ($unary-arg-cont (op cont)
-                       (apply-handler val cont))
+                       (apply-handler VAL cont resume-cont))
       ($if-test-cont (then-exp else-exp env cont)
-                     (apply-handler val cont))
+                     (apply-handler VAL cont resume-cont))
       ($diff1-cont (e2 env cont)
-                   (apply-handler val cont))          
+                   (apply-handler VAL cont resume-cont))          
       ($diff2-cont (v1 cont)
-                   (apply-handler val cont))
+                   (apply-handler VAL cont resume-cont))
       ($rator-cont (rand-exp env cont)
-                   (apply-handler val cont))
+                   (apply-handler VAL cont resume-cont))
       ($rand-cont (f-expval cont)                                             
-                  (apply-handler val cont))
+                  (apply-handler VAL cont resume-cont))
       
       ))
-  ; =============================================================
+
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+  ; ___________________________________________________________________________________________________________
+
   ; eval-program :: Program -> FinalAnswer
   (define (eval-program prog)
     (cases program prog
       (a-program (expr)
                  (eval/k expr (init-env) ($end-cont)))))
-    
+  ; =============================================================  
   ; interp :: String -> ExpVal
   (define (interp src)
     (eval-program (scan&parse src)))

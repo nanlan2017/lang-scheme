@@ -33,37 +33,34 @@
 
 
   ; apply-handler :: ExpVal x Cont -> FinalAnswer
-  (define (apply-handler val k spot-cont)
+  (define (apply-handler val k raising-spot-cont)
     (cases Continuation k
       ;
       ($end-cont ()
                  (eopl:error "======= Uncaught Exception! ========" val))
       
-      ($try-cont (cvar handler-exp env cont)       ; 该cont是try语句的cont; 可同时包含 raise语句的cont
-                 (eval/k handler-exp ($extend-env cvar val env)
-                         ; cont
-                         spot-cont
-                         ))
+      ($try-cont (cvar handler-exp env cont)       ; ██████████ 该cont是try语句的cont; 可同时包含 raise语句的cont
+                 (eval/k handler-exp ($extend-env cvar val env) raising-spot-cont ))
 
       
       ($raise1-cont (cont)
-                    (apply-handler val cont spot-cont))
+                    (apply-handler val cont raising-spot-cont))
       
       ;```````````````````````````````
       ($unary-arg-cont (op cont)
-                       (apply-handler val cont spot-cont))
+                       (apply-handler val cont raising-spot-cont))
       ($if-test-cont (then-exp else-exp env cont)
-                     (apply-handler val cont spot-cont))
+                     (apply-handler val cont raising-spot-cont))
       ($diff1-cont (e2 env cont)
-                   (apply-handler val cont spot-cont))          
+                   (apply-handler val cont raising-spot-cont))          
       ($diff2-cont (v1 cont)
-                   (apply-handler val cont spot-cont))
+                   (apply-handler val cont raising-spot-cont))
       ($rator-cont (rand-exps env cont)
-                   (apply-handler val cont spot-cont))
+                   (apply-handler val cont raising-spot-cont))
       ($rands-cont (f vals exps env cont)                                             
-                   (apply-handler val cont spot-cont))
+                   (apply-handler val cont raising-spot-cont))
       ($begin-cont (exps env cont)
-                   (apply-handler val cont spot-cont))
+                   (apply-handler val cont raising-spot-cont))
       
       ))
 
@@ -78,7 +75,7 @@
       ($try-cont (cvar handler-exp env cont)
                  (apply-cont cont VAL))
       ($raise1-cont (cont)
-                    (apply-handler VAL cont cont))         ; 目标：把raise处的cont要传到handler,以作为handler-exp的cont
+                    (apply-handler VAL cont cont))         ;░░░░░░░░░░ 目标：把raise处的cont要传到handler,以作为handler-exp的cont
       ; ``````````````````````````````````````````
       ; if
       ($if-test-cont (then-exp else-exp env cont)
@@ -140,12 +137,12 @@
       (unary-op-exp (unary-op exp)
                     (eval/k exp env ($unary-arg-cont unary-op cont)))
 
-      ; ----------------
-      (begin-exp (e1 exps)        ;  eval e1 \v1-> eval e2 \v2 -> eval ei \vi -> vi
+      ; ----------------  新增begin, print n 两种表达式、便于写测试代码
+      (begin-exp (e1 exps)
                  (eval/k e1 env ($begin-cont exps env cont)))
                  
       (print-num-exp (n)
-                     (eopl:printf "______print____~s~n" n)
+                     (eopl:printf "______print____~s~n" n)  ; expression都是有value的！
                      (apply-cont cont ($num-val 10000)))
       
       ; ----------------
