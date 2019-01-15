@@ -8,29 +8,7 @@
   (require "2-scheduler.scm")
   (require "2-semaphores.scm")     
   
-  (provide run
-           value-of-program
-           Option@trace-interp
-
-           ; imported
-           get-store-as-list
-           
-           %ready-queue
-           %final-answer
-           %max-time-slice
-           %time-remaining
-           )
-  ; ********************************************************************************************************
-  ; 由于 Expression从语义上来讲都应该是有val的,在此赋予这些 executed for effect 的expression一些约定的任意值
-  ; 包括：
-  ;   1.  set
-  ;   2.  print
-  ;   3.  spawn , wait , signal , yield
-  ; ████████统一使用 $stub 'xx-RET
-  ; ********************************************************************************************************
-
-  ; setting option
-  (define Option@trace-interp (make-parameter #f))
+  (provide (all-defined-out))
 
   (define (apply-procedure/k f argv cont)
     (cases Proc f
@@ -51,19 +29,57 @@
   (define (run ticks src)
     (value-of-program ticks (scan&parse src)))
 
+  ; ==========================================================================================================
+  (define fresh-thread-id
+    (let [(sn -1)]
+      (lambda ()
+        (set! sn (+ 1 sn))
+        sn)))
+
+  (define (remove-first pred q)
+    (let loop ([lst '()]
+               [q q])
+      (if (null? q)
+          #f
+          (let ([head (car q)]
+                [tail (cdr q)])
+            (if (pred head)
+                (append (reverse lst) tail)
+                (loop (cons head lst) tail))))))
+  ; --------------------------------
+  
+  (define (new-thread proc1)
+    (let* [(thread-id (fresh-thread-id))
+           (th ($a-thread thread-id (lambda ()
+                                      (apply-procedure/k proc1 ($num-val thread-id) ($end-cont-subthread)))))]
+      (set-list-of-threads! (cons th %list-of-threads))
+      th))
+
+  (define is-of-id
+    (lambda (id)
+      (lambda (th)
+        (= (thread->id th) id))))
+
+  (define (remove-thread id)
+    (let ([result (remove-first (is-of-id id) %list-of-threads)])
+      (if result
+          (set-list-of-threads! result)
+          (eopl:error 'remove-thread "failed to remove thread of id ~s" id))))
+  ; ==========================================================================================================
   ; value-of-program : Int * Program -> ExpVal     
   (define (value-of-program timeslice pgm)
-    (initialize-store!)
-    (initialize-scheduler! timeslice)
+    (initialize-store!)    
     (cases program pgm
       (a-program (exp1)
-                 (eval/k exp1 (init-env) ($end-cont-main-thread)))))
-  ; ==========================================================================================================
-  ; Page 182
+                 (let [(th ($a-thread (fresh-thread-id) (lambda ()
+                                                          (eval/k exp1 (init-env) ($end-cont-main-thread)))))]
+                   (initialize-scheduler! timeslice th)
+                   ((thread->proc th))))))
+  
   ; value-of/k : Exp * Env * Cont -> FinalAnswer  
   (define (eval/k exp env cont)
-    (when (Option@trace-interp)
-      (eopl:printf "value-of/k: ~s~%" exp))
+    (when (@debug)
+      (eopl:printf "           eval/k : ~s~n" (get-exp-variant-name exp)))
       
     (cases expression exp
       (const-exp (num)
@@ -78,92 +94,74 @@
                   (eval/k letrec-body ($extend-env-rec* p-names b-vars p-bodies env) cont))
       (const-list-exp (nums)
                       (apply-cont cont ($list-val (map $num-val nums))))
-      ; `````````````````````````````````````````
       (diff-exp (exp1 exp2)
                 (eval/k exp1 env ($diff1-cont exp2 env cont)))
-
       (if-exp (exp1 exp2 exp3)
               (eval/k exp1 env ($if-test-cont exp2 exp3 env cont)))
-
       (call-exp (rator rand)
                 (eval/k rator env ($rator-cont rand env cont)))
-
       (begin-exp (exp exps)    
                  (if (null? exps)
                      (eval/k exp env cont)
-                     (eval/k (call-exp (proc-exp (fresh-identifier 'dummy) (begin-exp (car exps) (cdr exps))) exp) env cont)
-                     ; (eval/k (begin-exp (car exps) (cdr exps)) env cont)  ; 错了！只有最后一个exp被求值了！
-                     ))
-
+                     (eval/k (call-exp (proc-exp (fresh-identifier 'dummy) (begin-exp (car exps) (cdr exps))) exp) env cont)))
       (set-exp (id exp)
                (eval/k exp env ($set-rhs-cont (apply-env env id) cont)))
-
       (unop-exp (unop1 exp)
                 (eval/k exp env ($unop-arg-cont unop1 cont)))
-      ; -------------------------------------------------------
+      ; \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
       (spawn-exp (exp)
                  (eval/k exp env ($spawn-cont cont)))
-
       ; ----------------
       (mutex-exp ()
                  (apply-cont cont ($mutex-val (new-mutex))))
-
       (wait-exp (exp)
                 (eval/k exp env ($wait-cont cont)))
-
       (signal-exp (exp)
                   (eval/k exp env ($signal-cont cont)))
       ; ----------------
       (yield-exp ()
-                 ; ☆ yield是挂起当前线程（同样是推进%ready-quene） （运行下一个线程）
-                 (place-on-ready-queue! (lambda ()
-                                          (apply-cont cont ($stub 'YIELD-RET))))
+                 (place-on-ready-queue! ($a-thread %current-thread-id (lambda ()  ; ██
+                                                                        (apply-cont cont ($stub 'YIELD-RET)))))
                  (run-next-thread))
-
-        
       ))
-  ; ===============================================================
-  ; Page: 182 and 186
   ; apply-cont : Cont * Exp -> FinalAnswer  
   (define (apply-cont k VAL)
-    (when (@debug) (eopl:printf "               apply-cont~n"))
+    (when (@debug) (eopl:printf "           apply-cont : ~s~n" (get-cont-variant-name k)))
+    
     (if (time-expired?)
-        ; time expired !           ; ██████ 进行线程切换！
-        (begin
-          (place-on-ready-queue! (lambda ()
-                                   (apply-cont k VAL)))
-          (run-next-thread))
-        ; time remains ~
-        (begin
-          (decrement-timer!)       ; ██████ 唯一的 decrement-timer !  apply-cont就是“计步”的地方，因为Monad化的每一个链条就代表一个计算步骤  f x >>=\v1-> g y >>=\v2-> ...
-            
-          (cases Continuation k
-            ($end-cont-main-thread ()
-                                   (set-final-answer! VAL)
-                                   (run-next-thread))
-  
-            ($end-cont-subthread ()
-                                 (run-next-thread))
-            ; ------------------------------------------------------------
-            
+        (begin ; time expired !
+          (place-on-ready-queue! ($a-thread %current-thread-id (lambda () ; ██
+                                                                 (apply-cont k VAL))))
+          (run-next-thread))  
+        (begin ; time remains ~
+          (decrement-timer!)
+          
+          (cases Continuation k       
             ($spawn-cont (cont)
-                         (let ((f (expval->proc VAL)))
-                           ; ☆ spawn : 只是把一个线程放入 %ready-quene， 并不会立即运行！
-                           (place-on-ready-queue! (lambda ()
-                                                    (apply-procedure/k f ($stub 'DUMMY-ARG) ($end-cont-subthread))))
-                           (apply-cont cont ($stub 'SPAWN-RET))))
+                         (let* [(f (expval->proc VAL))
+                                (th (new-thread f))]
+                           (place-on-ready-queue! th) ; ██                                                
+                           (apply-cont cont ($num-val (thread->id th)))))
             ; ---------------------
             ($wait-cont (cont)
                         (let [(mut (expval->mutex VAL))]
-                          (access-mutex mut (lambda ()
+                          (access-mutex mut (lambda () ; ░░
                                               (apply-cont cont ($stub 'WAIT-RET))))))
 
             ($signal-cont (cont)
                           (let [(mut (expval->mutex VAL))]
-                            (leave-mutex mut (lambda ()
+                            (leave-mutex mut (lambda () ; ░░
                                                (apply-cont cont ($stub 'SIGNAL-RET))))))
+            ; ----------------------  
+            ($end-cont-main-thread ()
+                                   (set-final-answer! VAL)
+                                   (remove-thread %current-thread-id)
+                                   (run-next-thread))  
+            ($end-cont-subthread ()
+                                 (remove-thread %current-thread-id)
+                                 (run-next-thread))
 
-            ; ------------------------------------------------------------
+            ; ///////////////////////////////////////////////////////////////////////////////////////////////////
             ; unary-op
             ($unop-arg-cont (unop1 cont)
                             (apply-unop/k unop1 VAL cont))

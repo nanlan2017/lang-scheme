@@ -118,9 +118,22 @@
      (body expression?)
      (env Env?)))
 
-  ; ======================================================================== Mutex
+  ; ======================================================================== Thread, Mutex
+  (define-datatype Thread Thread?
+    ($a-thread
+     (thunk procedure?)
+     (time-remaining integer?)))
+
+  (define (get-thunk-of-thread th)
+    (cases Thread th
+      ($a-thread (thk time)
+                 thk)))
+  (define (get-time-remaining-of-thread th)
+    (cases Thread th
+      ($a-thread (thk time)
+                 time)))
+  ;--------------------------------------
   ; “锁” 
-  
   ; A mutex may either be open or closed.
   ; It also contains a queue of threads that are waiting for the mutex to become open
   (define-datatype Mutex Mutex?

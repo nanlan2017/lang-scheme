@@ -118,9 +118,23 @@
      (body expression?)
      (env Env?)))
 
-  ; ======================================================================== Mutex
+  ; ======================================================================== Thread, Mutex
+  (define-datatype Thread Thread?
+    ($a-thread
+     (id integer?)
+     (p procedure?)))
+
+  (define (thread->id th)
+    (cases Thread th
+      ($a-thread (id p)
+                 id)))
+
+  (define (thread->proc th)
+    (cases Thread th
+      ($a-thread (id p)
+                 p)))
+  ;--------------------------------------
   ; “锁” 
-  
   ; A mutex may either be open or closed.
   ; It also contains a queue of threads that are waiting for the mutex to become open
   (define-datatype Mutex Mutex?

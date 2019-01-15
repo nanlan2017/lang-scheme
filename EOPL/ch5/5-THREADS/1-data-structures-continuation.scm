@@ -6,10 +6,10 @@
   (provide (all-defined-out))
   ; ======================================================================== continuations
   (define-datatype Continuation Continuation?
-
-    ($end-cont-main-thread)
     
-    ($end-cont-subthread)
+    ($end-cont-main-thread)      
+    
+    ($end-cont-subthread)        ; spawn(p) 创建的线程就是 sub-thread
 
     ; 多线程
     ($spawn-cont 

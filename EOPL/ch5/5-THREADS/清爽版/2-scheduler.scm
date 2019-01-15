@@ -17,7 +17,7 @@
            %max-time-slice
            %time-remaining
            )
-  ; ================================================================ 内部 threads调度器  
+  ; ================================================================ 
   ;  the state ： components of the scheduler state:  
   (define %ready-queue   'uninitialized)           
   
@@ -47,7 +47,7 @@
 
   ; decrement-timer! : () -> Unspecified
   (define (decrement-timer!)
-    (when (@debug) (eopl:printf "--------------- 计步器-1, %time-remaining : ~s~n" (- %time-remaining 1)))
+    (when (@debug) (eopl:printf "--------------- %time-remaining : ~s~n" (- %time-remaining 1)))
     (set! %time-remaining (- %time-remaining 1)))
 
   ; █ 状态接口: %final-answer
@@ -58,7 +58,7 @@
   ; ------------------------------------------------------------------
   ; run-next-thread : () -> FinalAnswer  
   (define (run-next-thread)
-    (when (@debug) (eopl:printf "      >>> run-next-thread..~n"))
+    (when (@debug) (eopl:printf "      >>>>>>>>>> run-next-thread..~n"))
     (if (empty? %ready-queue)
         %final-answer
         (dequeue %ready-queue (lambda (first-ready-thread other-ready-threads)

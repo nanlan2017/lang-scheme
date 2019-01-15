@@ -2,6 +2,7 @@
 
   (require "0-debug.scm")
   (require "1-queues.scm")
+  (require "1-data-structures.scm")
   
   (provide initialize-scheduler!
            set-final-answer! 
@@ -9,63 +10,59 @@
            time-expired?
            decrement-timer!
 
-           run-next-thread
+           run-next-thread ; ★
 
            ; global data
            %ready-queue
-           %final-answer
-           %max-time-slice
+           %FinalAnswer
+           %MaxTimeSlice
            %time-remaining
            )
-  ; ================================================================ 内部 threads调度器  
+  ; ================================================================ 
   ;  the state ： components of the scheduler state:  
-  (define %ready-queue   'uninitialized)           
+  (define %ready-queue   'uninitialized)                    
   
-  (define %max-time-slice    'uninitialized)
+  (define %MaxTimeSlice    'uninitialized)
   (define %time-remaining    'uninitialized)
 
-  (define %final-answer  'uninitialized)
+  (define %FinalAnswer  'uninitialized)
 
-  ; █ 状态接口: %ready-queue
   ; place-on-ready-queue! : Thread -> Unspecified
   (define (place-on-ready-queue! th)
     (set! %ready-queue (enqueue %ready-queue th)))
   
-  ; █ 状态接口： %max-time-slice
   ; initialize-scheduler! : Int -> Unspecified
   (define (initialize-scheduler! ticks)
     (set! %ready-queue (empty-queue))
-    (set! %final-answer 'uninitialized)
+    (set! %FinalAnswer 'uninitialized)
       
-    (set! %max-time-slice ticks)
-    (set! %time-remaining %max-time-slice))
+    (set! %MaxTimeSlice ticks)
+    (set! %time-remaining %MaxTimeSlice))
 
-  ; █ 状态接口: %time-remaining
   ; time-expired? : () -> Bool 
   (define (time-expired?)
     (zero? %time-remaining))
 
   ; decrement-timer! : () -> Unspecified
   (define (decrement-timer!)
-    (when (@debug) (eopl:printf "--------------- 计步器-1, %time-remaining : ~s~n" (- %time-remaining 1)))
+    (when (@debug) (eopl:printf "--------------- %time-remaining : ~s~n" (- %time-remaining 1)))
     (set! %time-remaining (- %time-remaining 1)))
 
-  ; █ 状态接口: %final-answer
   ; set-final-answer! : ExpVal -> Unspecified 
   (define (set-final-answer! val)
-    (set! %final-answer val))
+    (set! %FinalAnswer val))
 
   ; ------------------------------------------------------------------
   ; run-next-thread : () -> FinalAnswer  
   (define (run-next-thread)
-    (when (@debug) (eopl:printf "      >>> run-next-thread..~n"))
+    (when (@debug) (eopl:printf "   >>>>>>>>>>>>>> run-next-thread..~n"))
     (if (empty? %ready-queue)
-        %final-answer
+        %FinalAnswer
         (dequeue %ready-queue (lambda (first-ready-thread other-ready-threads)
                                 ; 从pool中移除
                                 (set! %ready-queue other-ready-threads)
-                                ; 更新时间、运行起来
-                                (set! %time-remaining %max-time-slice) 
-                                (first-ready-thread)
+                                ; 运行
+                                (set! %time-remaining (get-time-remaining-of-thread first-ready-thread)) 
+                                ((get-thunk-of-thread first-ready-thread))
                                 ))))
   )
