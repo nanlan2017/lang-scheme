@@ -18,33 +18,24 @@
                                 (set! %ready-queue other-ready-threads)
                                 ; deal with first thread
                                 (set! %time-remaining %MaxTimeSlice) 
-                                (cases Thread first-ready-thread
-                                  ($a-thread (id p)
-                                             (set! %current-thread-id id)   ; ████ 切换线程时更新 %current-thread-id
-                                             (p)))
+                                (first-ready-thread)
                                 ))))
   ; ================================================================ 
   ;  the state ： components of the scheduler state:  
-  (define %ready-queue   'uninitialized)                   ; ████ 应该是Thread<id,proc>              
+  (define %ready-queue   'uninitialized)                      
   
   (define %MaxTimeSlice    'uninitialized)
   (define %time-remaining    'uninitialized)
 
   (define %FinalAnswer  'uninitialized)
-
-  (define %current-thread-id 'uninitialized)
-  (define %list-of-threads 'uninitialized)                 ; ████ 
   ; ---------------------------
   ; initialize-scheduler! : Int -> ()
-  (define (initialize-scheduler! ticks th)
+  (define (initialize-scheduler! ticks)
     (set! %ready-queue (empty-queue))
     (set! %FinalAnswer 'uninitialized)
       
     (set! %MaxTimeSlice ticks)
-    (set! %time-remaining %MaxTimeSlice)
-
-    (set! %current-thread-id (thread->id th))
-    (set! %list-of-threads (list th)))
+    (set! %time-remaining %MaxTimeSlice))
   ; ---------------------------
   ; %ready-queue
   (define (place-on-ready-queue! th)
@@ -61,9 +52,5 @@
   (define (decrement-timer!)
     (when (@debug) (eopl:printf "--------------- %time-remaining : ~s~n" (- %time-remaining 1)))
     (set! %time-remaining (- %time-remaining 1)))
-
-  ; %list-of-threads
-  (define (set-list-of-threads! val)
-    (set! %list-of-threads val))
 
   )

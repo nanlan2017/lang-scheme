@@ -28,8 +28,8 @@
 
   (define (run ticks src)
     (value-of-program ticks (scan&parse src)))
-
-  ; ==========================================================================================================
+  ; ----------------------------------------------------------------------------------------------------
+  
   (define fresh-thread-id
     (let [(sn -1)]
       (lambda ()
@@ -53,35 +53,117 @@
 
 
   
-  ; ----------------------------------------------------------------------------------------------------  spawn时创建新线程（区别于“更新已有线程”）
-  ;                                                                                                       end-cont时移除线程
+  ; ==========================================================================================================  spawn时创建新线程（区别于“更新已有线程”）
+  ;                                                                                                              end-cont时移除线程
   ; 添加新线程到 %list-of-threads
   ; new-thread :: Procedure -> Thread
   (define (new-thread proc1)
     (let* [(thread-id (fresh-thread-id))
-           (th ($a-thread thread-id (lambda ()
-                                      (apply-procedure/k proc1 ($num-val thread-id) ($end-cont-subthread)))))]
+           (th ($a-thread thread-id
+                          (lambda () (apply-procedure/k proc1 ($num-val thread-id) ($end-cont-subthread)))
+                          #f))]
+      (eopl:printf ".......Thread #~s is created and add to $list-of-threads. ~n" thread-id)
       (set-list-of-threads! (cons th %list-of-threads))
       th))
 
-  ; 从 %list-of-threads中移除
-  ; remove-thread:: No. -> ()
-  (define (remove-thread id)
-    (let ([result (remove-first (is-of-id id) %list-of-threads)])
+  ; 从 %list-of-threads中查找/移除
+  (define (get-thread-from-pool-by-id id)
+    (get-thread-by-id-from id %list-of-threads))
+  (define (remove-thread-from-pool-by-id id)
+    (eopl:printf ".......Thread #~s is removed from $list-of-threads. ~n" id)
+    (remove-thread-by-id-from id %list-of-threads))
+
+  ; --------------------------------------------------------------
+  ; 从thread的列表中查找/移除
+  (define (get-thread-by-id-from id th-lst)
+    (let loop [(lst th-lst)]
+      (if (null? lst)
+          (eopl:error "Didn't find thread of No.~s in pool!~n" id)
+          (if (= id (thread->id (car lst)))
+              (car lst)
+              (loop (cdr lst))))))
+
+  (define (remove-thread-by-id-from id th-lst)
+    (let ([result (remove-first (is-of-id id) th-lst)])
       (if result
-          (set-list-of-threads! result)
-          (eopl:error 'remove-thread "failed to remove thread of id ~s" id))))
+          (set! th-lst result)
+          (eopl:error 'remove-thread-by-id-from "failed to remove thread of id ~s" id))))
+
+  ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< LOG
+  (define (remove-duplicates lst)
+    (cond ((null? lst) '())
+          ((member (car lst) (cdr lst)) (remove-duplicates (cdr lst)))
+          (else (cons (car lst) (remove-duplicates (cdr lst))))))
   
+  (define (my-filter pred ls) 
+    (cond ((null? ls) '())
+          ((pred (car ls)) (cons (car ls) (my-filter pred (cdr ls))))
+          (else (my-filter pred (cdr ls)))))
+  
+  ; 获取所有的Mutex-es
+  (define (collect-system-mutexes)
+    (let* [(maybe-mutexes (map thread->maybe-mutex %list-of-threads))
+           (lst0 (remove-duplicates maybe-mutexes))]
+      (my-filter Mutex? lst0)))
+
+  (define (mutex-name mut)
+    (cases Mutex mut
+      ($a-mutex (ref1 ref2)
+                (string-append "mutex-" (number->string ref1) "-" (number->string ref2)))))
+
+  (define (get-wait-queue-ids-by-mutex mut)
+    (cases Mutex mut
+      ($a-mutex (ref1 ref2)
+                (map thread->id (deref ref2)))))
+
+  (define (log-system-state)
+    ; %current-thread-id
+    (eopl:printf "......[%current-thread-id] ~s~n" %current-thread-id)
+    ; %ready-queue
+    (eopl:printf "......[%ready-queue] ~s~n" (map thread->id %ready-queue))
+    ; %list-of-threads
+    (eopl:printf "......[%list-of-threads] ~s~n" (map thread->id %list-of-threads))
+    ; mutex , wait-queue
+    (for-each (lambda (mut)
+                (eopl:printf "......[mutex] ~s~n" (mutex-name mut))
+                (eopl:printf "......[wait-queue] ~s~n" (get-wait-queue-ids-by-mutex mut)))
+              (collect-system-mutexes))
+    )
+  ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  ; 在系统内消除thread
+  ; todo : 修改返回值为 #t , #f
+  (define (kill-thread-by-id id)
+    (eopl:printf "           going to kill thread #~s : ~n" id)
+    (eopl:printf "           【state before killing】 : ~n")
+    (log-system-state)
+    ; %list-of-threads
+    (remove-thread-from-pool-by-id id)
+    (cases Thread (get-thread-from-pool-by-id id)
+      ($a-thread (no proc maybe-mut)
+                 (if (= no %current-thread-id)
+                     ; 1. current-running
+                     (run-next-thread)
+                     (if maybe-mut
+                         ; 2. wait-queue of mutex
+                         (cases Mutex maybe-mut
+                           ($a-mutex (ref@closed? ref@wait-queue)
+                                     (remove-thread-by-id-from id (deref ref@wait-queue))))
+                         ; 3. %ready-queue
+                         (remove-thread-by-id-from id %ready-queue)))))
+    (eopl:printf "           【state after killing】 : ~n")
+    (log-system-state))
+
   ; ==========================================================================================================
   ; value-of-program : Int * Program -> ExpVal     
   (define (value-of-program timeslice pgm)
     (initialize-store!)    
     (cases program pgm
       (a-program (exp1)
-                 (let [(th-c ($a-thread (fresh-thread-id) (lambda ()
-                                                            (eval/k exp1 (init-env) ($end-cont-main-thread)))))]
-                   (initialize-scheduler! timeslice th-c)
-                   ((thread->proc th-c))))))
+                 (let [(main-thread ($a-thread (fresh-thread-id)
+                                               (lambda () (eval/k exp1 (init-env) ($end-cont-main-thread)))
+                                               #f))]
+                   (initialize-scheduler! timeslice main-thread)
+                   (run-thread main-thread)))))
   
   ; value-of/k : Exp * Env * Cont -> FinalAnswer  
   (define (eval/k exp env cont)
@@ -149,9 +231,13 @@
       ; ******************************************************************
 
       (yield-exp ()
-                 (place-on-ready-queue! ($a-thread %current-thread-id (lambda ()  ; ░░
-                                                                        (apply-cont cont ($stub 'YIELD-RET)))))
+                 (place-on-ready-queue! ($a-thread %current-thread-id ; ░░ 线程首尾循环
+                                                   (lambda () (apply-cont cont ($stub 'YIELD-RET)))
+                                                   #f))
                  (run-next-thread))
+
+      (kill-exp (exp)
+                (eval/k exp env ($kill-cont cont)))
       ))
   ; apply-cont : Cont * Exp -> FinalAnswer  
   (define (apply-cont k VAL)
@@ -159,35 +245,42 @@
     
     (if (time-expired?)
         (begin ; time expired !
-          (place-on-ready-queue! ($a-thread %current-thread-id (lambda () ; ░░
-                                                                 (apply-cont k VAL))))
+          (place-on-ready-queue! ($a-thread %current-thread-id  ; ░░ 线程首尾循环
+                                            (lambda () (apply-cont k VAL))
+                                            #f))
           (run-next-thread))  
         (begin ; time remains ~
           (decrement-timer!)
-          
+
           (cases Continuation k       
             ($spawn-cont (cont)
                          (let* [(f (expval->proc VAL))
                                 (th (new-thread f))]
-                           (place-on-ready-queue! th) ; ██                                                
-                           (apply-cont cont ($num-val (thread->id th)))))
+                           (place-on-ready-queue! th) ; ███                                                
+                           (apply-cont cont ($num-val (thread->id th)))))  ; spawn返回值：所创建的线程的 $num-val id
+
+            ($kill-cont (cont)
+                        (kill-thread-by-id (expval->num VAL)) 
+                        (apply-cont cont ($stub 'KILL-RET)))
             ; ------------------------------ not %ready-queue, but mutex : wait queue
             ($wait-cont (cont)
                         (let [(mut (expval->mutex VAL))]
-                          (wait-for-mutex mut ($a-thread %current-thread-id (lambda () ; ░░
-                                                                              (apply-cont cont ($stub 'WAIT-RET)))))))
+                          (wait-for-mutex mut ($a-thread %current-thread-id ; ░░█
+                                                         (lambda () (apply-cont cont ($stub 'WAIT-RET)))
+                                                         mut))))
 
             ($signal-cont (cont)
                           (let [(mut (expval->mutex VAL))]
-                            (signal-to-mutex mut ($a-thread %current-thread-id (lambda () ; ░░
-                                                                                 (apply-cont cont ($stub 'SIGNAL-RET)))))))
+                            (signal-to-mutex mut ($a-thread %current-thread-id ; ░░█
+                                                            (lambda () (apply-cont cont ($stub 'SIGNAL-RET)))
+                                                            #f))))
             ; -----------------------------------------------------------------------------  
             ($end-cont-main-thread ()
                                    (set-final-answer! VAL)
-                                   (remove-thread %current-thread-id)
+                                   (remove-thread-from-pool-by-id %current-thread-id)
                                    (run-next-thread))  
             ($end-cont-subthread ()
-                                 (remove-thread %current-thread-id)
+                                 (remove-thread-from-pool-by-id %current-thread-id)
                                  (run-next-thread))
 
             ; ///////////////////////////////////////////////////////////////////////////////////////////////////

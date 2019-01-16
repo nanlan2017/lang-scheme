@@ -21,6 +21,9 @@
     ($signal-cont 
      (saved-cont Continuation?))
 
+    ($kill-cont 
+     (saved-cont Continuation?))
+
     ;````````````````````````````````
     ; diff
     ($diff1-cont               

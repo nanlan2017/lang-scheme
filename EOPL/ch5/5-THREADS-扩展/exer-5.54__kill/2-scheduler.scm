@@ -9,20 +9,16 @@
   ; ------------------------------------------------------------------
   ;  注意： 会减少 %ready-queue 中的线程
   ; run-next-thread : () -> FinalAnswer  
-  (define (run-next-thread)
-    (when (@debug) (eopl:printf "   >>>>>>>>>>>>>> run-next-thread..~n"))
-    
+  (define (run-next-thread) 
     (if (empty? %ready-queue)
         %FinalAnswer
         (dequeue %ready-queue (lambda (first-ready-thread other-ready-threads)
                                 (set! %ready-queue other-ready-threads)
                                 ; deal with first thread
-                                (set! %time-remaining %MaxTimeSlice) 
-                                (cases Thread first-ready-thread
-                                  ($a-thread (id p)
-                                             (set! %current-thread-id id)   ; ████ 切换线程时更新 %current-thread-id
-                                             (p)))
-                                ))))
+                                (set! %time-remaining %MaxTimeSlice)
+                                (set! %current-thread-id (thread->id first-ready-thread)) ; ████ 切换线程时更新 %current-thread-id
+                                (run-thread first-ready-thread)))))
+                                
   ; ================================================================ 
   ;  the state ： components of the scheduler state:  
   (define %ready-queue   'uninitialized)                   ; ████ 应该是Thread<id,proc>              
@@ -48,6 +44,7 @@
   ; ---------------------------
   ; %ready-queue
   (define (place-on-ready-queue! th)
+    (eopl:printf ".......place-on-ready-queue! thread #~s~n" (thread->id th))
     (set! %ready-queue (enqueue %ready-queue th)))
 
   ; %FinalAnswer
