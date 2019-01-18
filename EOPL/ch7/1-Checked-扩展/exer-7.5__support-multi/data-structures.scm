@@ -1,7 +1,8 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "lang.scm")
-  ;;====================================== Expressed Value | Denoted Value
+  (require "utils.scm")
+  ;;====================================== ExpVal
   (define-datatype ExpVal ExpVal?
     ($num-val
      (num number?))
@@ -32,23 +33,23 @@
   (define expval-extractor-error
     (lambda (variant value)
       (eopl:error 'expval-extractors "Looking for a ~s, found ~s" variant value)))
-  ;;====================================== Proc (抽象类型)
+  ;;====================================== Proc
   (define-datatype Proc Proc?
     ($procedure
-     (var identifier?)
+     (var (list-of identifier?))
      (body expression?)
      (env Env?)))   
-  ;;====================================== Env (采用datatype 表示法)
+  ;;====================================== Env
   (define-datatype Env Env?
     ($empty-env)   
     ($extend-env
      (var symbol?)
      (val ExpVal?)
      (env Env?))
-    ($extend-env-rec
-     (p-name identifier?)
-     (b-var identifier?)
-     (body expression?)
+    ($extend-env-rec*
+     (p-name (list-of identifier?))
+     (b-var (list-of (list-of identifier?)))
+     (body (list-of expression?))
      (env Env?))
     )
 
@@ -57,10 +58,13 @@
 
   ; extend-env* :: [symbol] x [ExpVal] x Env -> Env
   (define (extend-env* vars expvals env)
-    (if (null? vars)
-        env
-        (let [(new-env ($extend-env (car vars) (car expvals) env))]
-          (extend-env* (cdr vars) (cdr expvals) new-env))))
+    (if (not (= (length vars) (length expvals)))
+        (eopl:error 'extend-tenv "wjh: lengths not matched!")
+        (if (null? vars)
+            env
+            (let [(new-env ($extend-env (car vars) (car expvals) env))]
+              (extend-env* (cdr vars) (cdr expvals) new-env)))))
+    
 
   ;; apply-env == look-up-env
   (define (apply-env env var)
@@ -71,10 +75,19 @@
                    (if (eqv? saved-var var)
                        saved-val
                        (apply-env saved-env var)))
-      ($extend-env-rec (p-name b-var p-body saved-env)
-                       (if (eqv? var p-name)
-                           ($proc-val ($procedure b-var p-body env))
-                           (apply-env saved-env var)))
+      ($extend-env-rec* (fids bvars-s proc-body-s env/without-fids)                       
+                        (let [(res (maybe-has-proc? var fids bvars-s proc-body-s))]
+                          (if res
+                              ($proc-val ($procedure (cadr res) (caddr res) env))
+                              (apply-env env/without-fids var))))
       ))
+
+  ; return '(fid bvars body) if exists ; else return #f                                    
+  (define (maybe-has-proc? search-f fid-s bvars-s body-s)
+    (if (null? fid-s)
+        #f
+        (if (eqv? search-f (car fid-s))
+            (list search-f (car bvars-s) (car body-s))
+            (maybe-has-proc? search-f (cdr fid-s) (cdr bvars-s) (cdr body-s)))))
 
   )

@@ -9,24 +9,30 @@
       (number ("-" digit (arbno digit)) number)
       ))
 
+  ; (sp "(int * bool -> int)")
+  ; -> 左侧一定要留一个空格
   (define the-grammar
-    '((program (expression) $a-program)
+    '(
+      ; (signature (Type) $a-signature)
+      (program (expression) $a-program)
+      
       ;------------------------- Type -------------------------------------
       (Type ("int") $int-type)      
       (Type ("bool") $bool-type)      
-      (Type ("(" Type "->" Type ")") $proc-type)
+      (Type ("(" (separated-list Type "*") "->" Type ")") $proc-type)
       ;------------------------- Expression -------------------------------
       (expression (number) $const-exp)
       (expression (identifier) $var-exp)
       (expression ("-" "(" expression "," expression ")")  $diff-exp)
       (expression ("zero?" "(" expression ")") $zero?-exp)
       (expression ("if" expression "then" expression "else" expression)  $if-exp)
-      (expression ("let" identifier "=" expression "in" expression) $let-exp)
+      
+      (expression ("let" (separated-list identifier "=" expression ",") "in" expression) $let-exp)
 
-      (expression ("proc" "(" identifier ":" Type ")" expression) $proc-exp)
-      (expression ("(" expression expression ")") $call-exp)
+      (expression ("proc" "(" (separated-list identifier ":" Type ",") ")" expression) $proc-exp)
+      (expression ("(" expression (arbno expression) ")") $call-exp)
 
-      (expression ("letrec" Type identifier "(" identifier ":" Type ")" "=" expression "in" expression) $letrec-exp)      
+      (expression ("letrec" (arbno Type identifier "(" (separated-list identifier ":" Type ",") ")" "=" expression) "in" expression) $letrec-exp)      
       ))
       
   ; ================================================================== SLLGEN

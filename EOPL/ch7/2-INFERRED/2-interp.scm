@@ -1,9 +1,9 @@
 (module interp (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "data-structures.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
+  (require "2-data-structures.scm")
+
   ;;============================================================= procedure  
   ;; apply-procedure : Proc * Val -> ExpVal
   (define (apply-procedure proc arg)
@@ -35,7 +35,7 @@
       (let-exp (var e1 body)
                (let [(v1 (eval e1 env))]
                  (eval body ($extend-env var v1 env))))
-      ;; 1-arg proc
+      ;; proc
       (proc-exp (var ty body)
                 ($proc-val ($procedure var body env)))
       (call-exp (rator rand)
@@ -53,15 +53,9 @@
     (cases program prog
       (a-program (expr)
                  (eval expr (init-env)))))
-  ; =============================================================  
   ; interp :: String -> ExpVal
   (define (interp src)
     (eval-program (scan&parse src)))
-
-  (define (pretty-interp src) 
-    (eopl:printf "--------------~n~s~n~n~n~s~n--------------" src (interp src)))
-
-  (define sp scan&parse)
   (define run interp)
 
   )

@@ -15,6 +15,9 @@
       (Type ("int") $int-type)      
       (Type ("bool") $bool-type)      
       (Type ("(" Type "->" Type ")") $proc-type)
+      (Type ("pairof" Type "*" Type) $pair-type)
+      (Type ("listof" Type) $list-type)
+      
       ;------------------------- Expression -------------------------------
       (expression (number) $const-exp)
       (expression (identifier) $var-exp)
@@ -26,7 +29,15 @@
       (expression ("proc" "(" identifier ":" Type ")" expression) $proc-exp)
       (expression ("(" expression expression ")") $call-exp)
 
-      (expression ("letrec" Type identifier "(" identifier ":" Type ")" "=" expression "in" expression) $letrec-exp)      
+      (expression ("letrec" Type identifier "(" identifier ":" Type ")" "=" expression "in" expression) $letrec-exp)
+      ; --------------------
+      (expression ("newpair" "(" expression "," expression ")") $newpair-exp)
+      (expression ("unpair" identifier identifier "=" expression "in" expression) $unpair-exp)
+
+      (expression ("list" "(" expression (arbno "," expression) ")") $list-exp)
+      (expression ("cons" "(" expression "," expression ")") $cons-exp)
+      (expression ("null?" "(" expression ")") $null?-exp)
+      (expression ("[" Type "]") $emptylist-exp)
       ))
       
   ; ================================================================== SLLGEN

@@ -6,10 +6,10 @@
 
   ;;============================================================= procedure  
   ;; apply-procedure : Proc * Val -> ExpVal
-  (define (apply-procedure proc arg)
+  (define (apply-procedure proc argvs)
     (cases Proc proc
-      ($procedure (param bodyexp env)
-                  (eval bodyexp ($extend-env param arg env)))))  
+      ($procedure (params bodyexp env)
+                  (eval bodyexp (extend-env* params argvs env)))))  
   
   ;;============================================================= 
   ;; eval :: expression x Env -> ExpVal
@@ -32,19 +32,19 @@
                (if (expval->bool (eval e1 env))
                    (eval e2 env)
                    (eval e3 env)))
-      ($let-exp (var e1 body)
-                (let [(v1 (eval e1 env))]
-                  (eval body ($extend-env var v1 env))))
+      ($let-exp (vars exps body)
+                (let [(vals (map (lambda (e) (eval e env)) exps))]
+                  (eval body (extend-env* vars vals env))))
       ;; 1-arg proc
-      ($proc-exp (var ty body)
-                 ($proc-val ($procedure var body env)))
-      ($call-exp (rator rand)
+      ($proc-exp (vars ty body)
+                 ($proc-val ($procedure vars body env)))
+      ($call-exp (rator rands)
                  (let [(f (expval->proc (eval rator env)))
-                       (arg (eval rand env))]
-                   (apply-procedure f arg)))                               
+                       (argvs (map (lambda (e) (eval e env)) rands))]
+                   (apply-procedure f argvs)))                               
       ;; letrec
-      ($letrec-exp (p-res-type pid b-var b-var-type p-body letrec-body)
-                   (eval letrec-body ($extend-env-rec pid b-var p-body env)))
+      ($letrec-exp (p-res-type-s pid-s bvars-s b-var-type-s-s pbody-s letrec-body)
+                   (eval letrec-body ($extend-env-rec* pid-s bvars-s pbody-s env)))
                   
       ))
 

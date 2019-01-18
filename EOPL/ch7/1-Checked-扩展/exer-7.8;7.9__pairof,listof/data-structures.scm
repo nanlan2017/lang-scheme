@@ -1,7 +1,6 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "lang.scm")
-  (require "utils.scm")
   ;;====================================== Expressed Value | Denoted Value
   (define-datatype ExpVal ExpVal?
     ($num-val
@@ -10,26 +9,52 @@
      (v boolean?))
     ($proc-val
      (p Proc?))
+    ($pair-val
+     (v1 ExpVal?)
+     (v2 ExpVal?))
+    ($list-val
+     (vals (list-of ExpVal?)))
     )
 
-  ;; expval -> number
-  (define (expval->num expval)
-    (cases ExpVal expval
-      ($num-val (n) n)
-      (else (eopl:error "Can't get num-val from ExpVal :" expval))
-      ))
-  ;; expval -> boolean
-  (define (expval->bool expval)
-    (cases ExpVal expval
-      ($bool-val (b) b)
-      (else (eopl:error "Can't get bool-val from ExpVal :" expval))
-      ))
-  ;; expval -> Proc
-  (define (expval->proc expval)
-    (cases ExpVal expval
-      ($proc-val (p) p)
-      (else (eopl:error "Can't get proc-val from ExpVal :" expval))
-      ))
+  (define expval->num
+    (lambda (v)
+      (cases ExpVal v
+        ($num-val (num) num)
+        (else (expval-extractor-error 'num v)))))
+
+  (define expval->bool
+    (lambda (v)
+      (cases ExpVal v
+        ($bool-val (bool) bool)
+        (else (expval-extractor-error 'bool v)))))
+
+  (define expval->proc
+    (lambda (v)
+      (cases ExpVal v
+        ($proc-val (proc) proc)
+        (else (expval-extractor-error 'proc v)))))
+
+  (define expval->pair-left
+    (lambda (v)
+      (cases ExpVal v
+        ($pair-val (v1 v2) v1)
+        (else (expval-extractor-error 'pair v)))))
+  
+  (define expval->pair-right
+    (lambda (v)
+      (cases ExpVal v
+        ($pair-val (v1 v2) v2)
+        (else (expval-extractor-error 'pair v)))))
+  
+  (define expval->list
+    (lambda (v)
+      (cases ExpVal v
+        ($list-val (vals) vals)
+        (else (expval-extractor-error 'proc v)))))
+  
+  (define expval-extractor-error
+    (lambda (variant value)
+      (eopl:error 'expval-extractors "Looking for a ~s, found ~s" variant value)))
   ;;====================================== Proc (抽象类型)
   (define-datatype Proc Proc?
     ($procedure
@@ -51,9 +76,7 @@
     )
 
   (define (init-env)
-    ($extend-env 'i ($num-val 1)
-                 ($extend-env 'v ($num-val 5)
-                              ($extend-env 'x ($num-val 10) ($empty-env)))))
+    ($empty-env))
 
   ; extend-env* :: [symbol] x [ExpVal] x Env -> Env
   (define (extend-env* vars expvals env)
@@ -75,6 +98,6 @@
                        (if (eqv? var p-name)
                            ($proc-val ($procedure b-var p-body env))
                            (apply-env saved-env var)))
-      ))                              
+      ))
 
   )

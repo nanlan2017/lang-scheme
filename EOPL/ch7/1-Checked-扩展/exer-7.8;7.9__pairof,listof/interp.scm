@@ -45,6 +45,36 @@
       ;; letrec
       ($letrec-exp (p-res-type pid b-var b-var-type p-body letrec-body)
                    (eval letrec-body ($extend-env-rec pid b-var p-body env)))
+      ; ---------------------------------
+      ($newpair-exp (e1 e2)
+                    (let ([v1 (eval e1 env)]
+                          [v2 (eval e2 env)])
+                      ($pair-val v1 v2)))
+      
+      ($unpair-exp (var1 var2 e1 body)
+                   (let* [(v (eval e1 env))
+                          (lv (expval->pair-left v))
+                          (rv (expval->pair-right v))]
+                     (eval body (extend-env* (list var1 var2) (list lv rv) env))))
+      ; ---------------------------------
+      ($list-exp (e1 exps)
+                 (let [(vals (map (lambda (e) (eval e env)) (cons e1 exps)))]
+                   ($list-val vals)))
+      
+      ($cons-exp (e1 exp)
+                 (let [(v1 (eval e1 env))
+                       (vs (eval exp env))]
+                   ($list-val (append v1 (expval->list vs)))))
+      
+      ($null?-exp (exp)
+                  (let [(val (eval exp env))]
+                    (cases ExpVal val
+                      ($list-val (vs)
+                                 ($bool-val (null? vs)))
+                      (else (eopl:error 'null?-exp "exp not a list-val")))))
+      
+      ($emptylist-exp (ty)
+                      ($list-val '()))
                   
       ))
 

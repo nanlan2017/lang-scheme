@@ -1,8 +1,5 @@
 (module utils (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  ;------------------------------------------------------------------ 
-
-  (define identifier? symbol?)
 
   ;------------------------------------------------------------------ list utils
   (define (drop lst cnt)

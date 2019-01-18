@@ -24,5 +24,20 @@ in double
 proc (f : (bool -> int)) proc (n : int) (f zero?(n))
 "
     )
+  ; ================================================== pair ,list
+  (define src-pl-1
+    "
+let p1 = newpair(3,zero?(0))
+in unpair a b = p1
+   in b
+"
+    )
+  (define src-pl-2
+    "
+let id = proc(x:int) x
+in let lst1 = list(3,5,6,[int])
+   in lst1
+"
+    )
 
   )

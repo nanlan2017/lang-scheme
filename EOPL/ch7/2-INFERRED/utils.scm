@@ -1,9 +1,5 @@
 (module utils (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  ;------------------------------------------------------------------ 
-
-  (define identifier? symbol?)
-
   ;------------------------------------------------------------------ list utils
   (define (drop lst cnt)
     (let [(size (length lst))]
@@ -34,5 +30,12 @@
       [(null? los) #f]
       [(eqv? sym (car los)) 0]  ;; ?? 
       [else (+ 1 (location sym (cdr los)))]))
+  ; ----------------------------------------------------------------------
+  (define pair-of
+    (lambda (pred1 pred2)
+      (lambda (val)
+        (and (pair? val)
+             (pred1 (car val))
+             (pred2 (cdr val))))))
       
   )

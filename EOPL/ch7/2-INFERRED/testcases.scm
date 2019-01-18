@@ -1,7 +1,8 @@
 (module testcases (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  
-  (require "typer.scm")
+  (require "0-lang.scm")
+  (require "1-typer.scm")
+  (require "2-interp.scm")
   ; =========================================================================
 
   (define src-0
