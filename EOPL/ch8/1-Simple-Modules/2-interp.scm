@@ -1,9 +1,9 @@
 (module interp (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "data-structures.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
+  (require "2-data-structures.scm")
+
   ;;============================================================= procedure  
   ;; apply-procedure : Proc * Val -> ExpVal
   (define (apply-procedure proc arg)
@@ -12,30 +12,44 @@
                   (eval bodyexp ($extend-env param arg env)))))
 
   ;;=============================================================
-  ; eval-module-body :: ModuleBody<#[VarDefinitions]> * Env -> TypedModule<#bindings = extend-env>
-  (define (eval-module-body m-body env)
-    (cases ModuleBody m-body
-      ($a-module-body (var-defs)
-                      (if (null? var-defs)
-                          ($a-simple-module env)
-                          (cases VarDefinition (car var-defs)
-                            ($a-var-definition (var exp)
-                                               (let [(val (eval exp env))]
-                                                 (eval-module-body ($a-module-body (cdr var-defs)) ($extend-env var val env)))))))))
-               
-
   ; add-module-defns-to-env :: [ModuleDefinition] * Env -> Env
   (define (add-module-defns-to-env defns env)
     (if (null? defns)
         env
         (cases ModuleDefinition (car defns)
           ($a-module-definition (m-name iface m-body)
-                                (let [(new-env ($extend-env-with-module m-name
-                                                                        (eval-module-body m-body env)
-                                                                        env))]
+                                (let [(new-env ($extend-env-with-module m-name (eval-module-body m-body env) env))]
                                   (add-module-defns-to-env (cdr defns) new-env))))))
   
-  ;;============================================================= 
+  ; eval-module-body :: ModuleBody * Env -> TypedModule
+  (define (eval-module-body m-body env)
+    (cases ModuleBody m-body
+      ($a-module-body (var-defs)
+                      ($a-simple-module (defns-to-env var-defs env)))))
+
+  ; defns-to-env : Listof(Defn) × Env → Env
+  (define (defns-to-env defns env)
+    (if (null? defns)
+        ($empty-env)
+        (cases VarDefinition (car defns)
+          ($a-var-definition (var exp)
+                             (let ((val (eval exp env)))
+                               (let ((new-env ($extend-env var val env)))
+                                 ($extend-env var val (defns-to-env (cdr defns) new-env))))))))
+
+  
+  ;;=============================================================
+  ; eval-program :: Program -> ExpVal
+  (define (eval-program prog)
+    (cases Program prog
+      ($a-program (mod-defs expr)
+                  (eval expr (add-module-defns-to-env mod-defs (init-env))))))
+  
+  ; interp :: String -> ExpVal
+  (define (interp src)
+    (eval-program (scan&parse src)))
+  (define run interp)
+  
   ;; eval :: expression x Env -> ExpVal
   (define (eval exp env)
     (cases Expression exp
@@ -59,36 +73,19 @@
       ($let-exp (var e1 body)
                 (let [(v1 (eval e1 env))]
                   (eval body ($extend-env var v1 env))))
-      ;; 1-arg proc
       ($proc-exp (var ty body)
                  ($proc-val ($procedure var body env)))
       ($call-exp (rator rand)
                  (let [(f (expval->proc (eval rator env)))
                        (arg (eval rand env))]
                    (apply-procedure f arg)))                               
-      ;; letrec
       ($letrec-exp (p-res-type pid b-var b-var-type p-body letrec-body)
                    (eval letrec-body ($extend-env-rec pid b-var p-body env)))
-      ;; 
+      ; ----------------------------
       ($qualified-var-exp (mod-name var-name)
                           (lookup-qualified-var-in-env mod-name var-name env))
                   
       ))
 
-  ; eval-program :: Program -> ExpVal
-  (define (eval-program prog)
-    (cases Program prog
-      ($a-program (mod-defs expr)
-                  (eval expr (add-module-defns-to-env mod-defs (init-env))))))
-  ; =============================================================  
-  ; interp :: String -> ExpVal
-  (define (interp src)
-    (eval-program (scan&parse src)))
-
-  (define (pretty-interp src) 
-    (eopl:printf "--------------~n~s~n~n~n~s~n--------------" src (interp src)))
-
-  
-  (define run interp)
 
   )

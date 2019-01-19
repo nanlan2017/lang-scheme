@@ -1,7 +1,7 @@
 (module testcases (lib "eopl.ss" "eopl")
-  (require "lang.scm")  
-  (require "type-checker.scm")
-  (require "interp.scm")
+  (require "0-lang.scm")  
+  (require "1-type-checker.scm")
+  (require "2-interp.scm")
 
   ;====================================================================
 

@@ -1,7 +1,8 @@
 (module expand-type (lib "eopl.ss" "eopl")
 
-  (require "lang.scm")
-  (require "data-structures.scm")
+  (require "0-lang.scm")
+  (require "1-data-structures-static.scm")
+  (require "2-data-structures.scm")
 
   (provide expand-type)
   (provide expand-iface)

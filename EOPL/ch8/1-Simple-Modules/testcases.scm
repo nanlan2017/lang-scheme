@@ -1,7 +1,8 @@
 (module testcases (lib "eopl.ss" "eopl")
-  (require "lang.scm")
-  (require "interp.scm")
-  (require "type-checker.scm")
+  (require "0-lang.scm")
+  (require "1-type-checker.scm")
+  (require "2-interp.scm")
+  
 
   ;====================================================================
 
@@ -19,7 +20,7 @@
         a = 33
         x = -(a,1)    % = 32
         b = -(a,x)    % = 1
-        % c = -(x,b)   % = 31
+        c = -(x,b)    % = 31
       ]
 
   let a = 10

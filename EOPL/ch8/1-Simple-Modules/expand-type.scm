@@ -1,6 +1,6 @@
 (module expand-type (lib "eopl.ss" "eopl")
 
-  (require "lang.scm")
+  (require "0-lang.scm")
 
   (provide expand-type)
   (provide expand-iface)

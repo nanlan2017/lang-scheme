@@ -42,6 +42,16 @@
                      (defns-to-env (cdr defns) env)))))
   
   ;;============================================================= 
+  ; interp :: String -> ExpVal
+  (define (interp src)
+    (eval-program (scan&parse src)))
+  (define run interp)    
+  ; eval-program :: Program -> ExpVal
+  (define (eval-program prog)
+    (cases Program prog
+      ($a-program (mod-defs expr)
+                  (eval expr (add-module-defns-to-env mod-defs (init-env))))))
+
   ;; eval :: expression x Env -> ExpVal
   (define (eval exp env)
     (cases Expression exp
@@ -81,20 +91,6 @@
                   
       ))
 
-  ; eval-program :: Program -> ExpVal
-  (define (eval-program prog)
-    (cases Program prog
-      ($a-program (mod-defs expr)
-                  (eval expr (add-module-defns-to-env mod-defs (init-env))))))
-  ; =============================================================  
-  ; interp :: String -> ExpVal
-  (define (interp src)
-    (eval-program (scan&parse src)))
 
-  (define (pretty-interp src) 
-    (eopl:printf "--------------~n~s~n~n~n~s~n--------------" src (interp src)))
-
-  
-  (define run interp)
 
   )

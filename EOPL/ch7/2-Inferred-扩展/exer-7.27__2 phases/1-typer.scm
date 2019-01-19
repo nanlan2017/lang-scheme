@@ -35,15 +35,36 @@
                                (let [(substs (solve eqset (empty-subst)))]
                                  (apply-substs-to-type ty substs)))))))
                                
+  (define (listfy-eqset eqset)
+    (cases EquationSet eqset
+      ($empty-eqset ()
+                    '())
+      (█extend-eqset (tvar ty saved-eqset)
+                     (cons (cons (type-to-external-form tvar)
+                                 (type-to-external-form ty))
+                           (listfy-eqset saved-eqset)))))
 
+  (define (listfy-substs substs)
+    (if (null? substs)
+        '()
+        (let [(pr (car substs))
+              (left-substs (cdr substs))]
+          (cons (cons (type-to-external-form (car pr))
+                      (type-to-external-form (cdr pr)))
+                (listfy-substs left-substs)))))
+  
   ;  :: EquationSet -> Substitution 
   (define (solve eqset substs)
-    (eopl:printf "Solving equations...~n")
+    (eopl:printf "Solving equations...~n~s~n" (listfy-eqset eqset))    
+    (eopl:printf "~n")
+    
     (cases EquationSet eqset
       ($empty-eqset ()
                     substs)
       (█extend-eqset (tvar ty saved-eqset)
-                     (█unify tvar ty (solve saved-eqset substs) 'no-exp))))
+                     (let [(tmp-substs (solve saved-eqset substs))]
+                       (eopl:printf "Substitutions...~n~s~n" (listfy-substs tmp-substs))
+                       (█unify tvar ty tmp-substs 'no-exp)))))
 
   ; =======================================================================
   ; typeof 和 $extend-eqset 都会更新 EqSet

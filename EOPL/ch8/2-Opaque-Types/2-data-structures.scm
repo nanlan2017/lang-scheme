@@ -1,7 +1,6 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  (require "lang.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
   ;;============================================================= Expressed Value
   (define-datatype ExpVal ExpVal?
     ($num-val
@@ -36,27 +35,8 @@
      (var identifier?)
      (body Expression?)
      (env Env?)))
-  ;;============================================================= TypedModule = {Env == let* a ;b;c }
-  (define-datatype TypedModule TypedModule?
-    ($a-simple-module
-     (bindings Env?))
-    )
-
-  (define (lookup-module-in-env mod-name env)
-    (cases Env env
-      ($extend-env-with-module (mod-id mod-val saved-env)
-                               (if (eqv? mod-name mod-id)
-                                   mod-val
-                                   (lookup-module-in-env mod-name saved-env)))
-      (else (lookup-module-in-env mod-name (get-nested-env env)))))
-
-  (define (lookup-qualified-var-in-env mod-name var-name env)
-    (let [(mod-val (lookup-module-in-env mod-name env))]
-      (cases TypedModule mod-val
-        ($a-simple-module (bindings)
-                        (apply-env bindings var-name)))))
     
-  ;;============================================================= Env (采用datatype 表示法)
+  ;;============================================================= Env
   (define-datatype Env Env?
     ($empty-env)   
     ($extend-env
@@ -88,9 +68,7 @@
       ))
 
   (define (init-env)
-    ($extend-env 'i ($num-val 1)
-                 ($extend-env 'v ($num-val 5)
-                              ($extend-env 'x ($num-val 10) ($empty-env)))))
+    ($empty-env))
 
   ; extend-env* :: [symbol] x [ExpVal] x Env -> Env
   (define (extend-env* vars expvals env)
@@ -115,48 +93,26 @@
       ($extend-env-with-module (mod-id mod-val saved-env)
                                (apply-env saved-env var))
       ))
-  ;;============================================================== tenv (symbol <-> type)
-  (define-datatype TEnv TEnv?
-    ($empty-tenv)
-    ($extend-tenv
-     (var symbol?)
-     (ty Type?)
-     (tenv TEnv?))
-    ; module
-    ($extend-tenv-with-module
-     (name symbol?)
-     (face SimpleInterface?)
-     (tenv TEnv?))
+  ;----------------------  
+  (define-datatype TypedModule TypedModule?
+    ($a-simple-module
+     (bindings Env?))
     )
 
-  (define (get-nested-tenv tenv)
-    (cases TEnv tenv
-      ($empty-tenv ()
-                  (eopl:error 'get-nested-tenv "No nested tenv for Empty-tenv !"))
-      ($extend-tenv (saved-var saved-ty saved-tenv)
-                     saved-tenv)
-      ($extend-tenv-with-module (mod-name face saved-tenv)
-                                saved-tenv)
-      ))
-
-  (define (init-tenv)
-    ($extend-tenv 'i ($int-type)
-                 ($extend-tenv 'v ($int-type)
-                              ($extend-tenv 'x ($int-type) ($empty-tenv)))))
+  (define (lookup-qualified-var-in-env mod-name var-name env)
+    (let [(mod-val (lookup-module-in-env mod-name env))]
+      (cases TypedModule mod-val
+        ($a-simple-module (bindings)
+                          (apply-env bindings var-name)))))
   
-  (define (apply-tenv tenv var)
-    (cases TEnv tenv
-      ($empty-tenv ()
-                  (eopl:error 'apply-tenv "Didn't find in type-env while search : ~s" var))
-      ($extend-tenv (saved-var saved-ty saved-tenv)
-                     (if (equal? var saved-var)
-                         saved-ty
-                         (apply-tenv saved-tenv var)))
-      ($extend-tenv-with-module (mod-name face saved-tenv)
-                                (apply-tenv saved-tenv var))
+  ; -> TypedModule
+  (define (lookup-module-in-env mod-name env)
+    (cases Env env
+      ($extend-env-with-module (mod-id mod-val saved-env)
+                               (if (eqv? mod-name mod-id)
+                                   mod-val
+                                   (lookup-module-in-env mod-name saved-env)))
+      (else (lookup-module-in-env mod-name (get-nested-env env)))))
 
-      ))
-                         
-     
 
   )

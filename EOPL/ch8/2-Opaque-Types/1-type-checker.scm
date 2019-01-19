@@ -1,12 +1,13 @@
 (module type-checker (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "lang-type.scm")
-  (require "data-structures.scm")
-  (require "expand-type.scm")
+  (require "0-lang.scm")
+  (require "1-data-structures-static.scm")
+  (require "1-expand-type.scm")
+  (require "2-data-structures.scm")
+  
   ; ===============================================================================================================  
-  ; parse得到 ModuleDefinition后， 直接加入 TEnv中  （此时要进行 Interface vs BodyImpl 的type check）
+  ; parse得到 ModuleDefinition后， 直接加入 TEnv中
   (define (add-module-defns-to-tenv defns tenv)
     (if (null? defns)
         tenv
@@ -18,12 +19,13 @@
                                         (add-module-defns-to-tenv (cdr defns) new-tenv))
                                       (report-module-doesnt-satisfy-iface m-name expected-iface actual-iface)))))))
 
-  ;-------------------------------------------------------------------------------- 检查interface和 body的一致性
+  ;------------------------------------------ 检查interface和 body的一致性
   ; interface-of :: ModuleBody * TEnv -> ModuleInterface
   (define (interface-of m-body tenv)
     (cases ModuleBody m-body
       ($a-module-body (var-defn-s)
                       ($a-simple-interface (defns-to-decls var-defn-s tenv)))))
+  
   ; defns-to-decls : Listof(Defn) × Tenv → Listof(Decl)
   (define (defns-to-decls defns tenv)
     (if (null? defns)
@@ -37,22 +39,13 @@
                             (let [(actual-ty (expand-type ty tenv))]
                               (defns-to-decls (cdr defns) ($extend-tenv-with-type actual-ty  tenv))))
           )))
-  ;---------------------------------------------
+  
   (define (<:-iface iface1 iface2 tenv)
     (cases SimpleInterface iface1
       ($a-simple-interface (var-decl-s1)
                            (cases SimpleInterface iface2
                              ($a-simple-interface (var-decl-s2)
                                                   (<:-decls var-decl-s1 var-decl-s2 tenv))))))
-  (define (decl->name decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          var)))
-  
-  (define (decl->type decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          ty)))
 
   ; [ a:Int ; b:Int]   <:   [a:Int]
   (define (<:-decls decls1 decls2 tenv)
@@ -64,8 +57,7 @@
               (if (eqv? name1 name2)
                   (and (equal? (decl->type (car decls1)) (decl->type (car decls2)))
                        (<:-decls (cdr decls1) (cdr decls2) tenv))
-                  (<:-decls (cdr decls1) decls2 tenv))))))
-    
+                  (<:-decls (cdr decls1) decls2 tenv))))))   
   
   (define (report-module-doesnt-satisfy-iface m-name expected-type actual-type)
     (eopl:printf  (list 'error-in-defn-of-module: m-name 'expected-type: expected-type 'actual-type: actual-type))
