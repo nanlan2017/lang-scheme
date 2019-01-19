@@ -1,9 +1,9 @@
 (module interp (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "data-structures.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
+  (require "2-data-structures.scm")
+
   ;;============================================================= procedure  
   ;; apply-procedure : Proc * Val -> ExpVal
   (define (apply-procedure proc arg)

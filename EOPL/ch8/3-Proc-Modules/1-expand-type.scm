@@ -1,10 +1,10 @@
 (module expand-type (lib "eopl.ss" "eopl")
 
-  (require "lang.scm")
-  (require "data-structures.scm")
+  (require "0-lang.scm")
+  (require "1-data-structures-static.scm")
 
-  (provide expand-type)
-  (provide expand-iface)
+  (provide expand-type
+    expand-iface)
   ;=============================================================================
   ; expand-type :: Type * TEnv -> ExpandedType
   (define (expand-type ty tenv)

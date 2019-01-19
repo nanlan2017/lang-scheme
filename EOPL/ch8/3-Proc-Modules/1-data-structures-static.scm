@@ -1,7 +1,7 @@
 (module lang-type (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "0-lang.scm")
-  ;;============================================================== TEnv 
+  ;;============================================================== TEnv : typer过程中,需保存的上下文类型
   (define-datatype TEnv TEnv?
     ($empty-tenv)
     ($extend-tenv
@@ -11,7 +11,7 @@
     ; module
     ($extend-tenv-with-module
      (name symbol?)
-     (face SimpleInterface?)
+     (face Interface?)
      (tenv TEnv?))
     ; expanded-type
     ($extend-tenv-with-type
@@ -33,9 +33,7 @@
       ))
 
   (define (init-tenv)
-    ($extend-tenv 'i ($int-type)
-                  ($extend-tenv 'v ($int-type)
-                                ($extend-tenv 'x ($int-type) ($empty-tenv)))))
+    ($empty-tenv))
   
   (define (apply-tenv tenv var)
     (cases TEnv tenv
@@ -62,21 +60,22 @@
       (else (lookup-module-in-tenv (get-nested-tenv tenv) m-name))))
 
   ; lookup-qualified-var-in-tenv :: Symbol * Symbol * TEnv -> Type                      
-  (define (lookup-tenv/qualified-var=>type m-name var-name tenv)
+  (define (lookup-qualified-var-in-tenv m-name var-name tenv)
     (let ((iface (lookup-module-in-tenv tenv m-name)))
-      (cases SimpleInterface iface
-        ($a-simple-interface (decls)
-                             (lookup-decls/var=>type var-name decls)))))
+      (cases Interface iface
+        ($simple-interface (decls)
+                             (lookup-variable-name-in-decls var-name decls)))))
 
   ; lookup-variable-name-in-decls :: Symbol * [VarDeclaration] -> Type
-  (define (lookup-decls/var=>type var-name decls)
+  (define (lookup-variable-name-in-decls var-name decls)
     (cases VarDeclaration (car decls)
       ($a-var-declaration (var ty)
                           (if (eqv? var var-name)
                               ty
-                              (lookup-decls/var=>type var-name (cdr decls))))
-      (else (lookup-decls/var=>type var-name (cdr decls)))))  
-  ; =============================================================================
+                              (lookup-variable-name-in-decls var-name (cdr decls))))
+      (else (lookup-variable-name-in-decls var-name (cdr decls)))))
+                           
+  ; ===============================================================================================================
   ;; check-equal-type! : Type * Type * Exp -> Unspecified
   (define check-equal-type!
     (lambda (ty1 ty2 exp)
@@ -87,7 +86,7 @@
   (define report-unequal-types
     (lambda (ty1 ty2 exp)
       (eopl:error 'check-equal-type!  "Types didn't match: ~s != ~a in~%~a"  (type-to-external-form ty1) (type-to-external-form ty2) exp)))
-  
+
   ;; type-to-external-form : Type -> List
   (define type-to-external-form
     (lambda (ty)
@@ -97,24 +96,22 @@
         ($bool-type ()
                     'bool)
         ($proc-type (arg-type result-type)
-                    (list (type-to-external-form arg-type) '-> (type-to-external-form result-type)))
+                   (list (type-to-external-form arg-type) '-> (type-to-external-form result-type)))
         ;
         ($named-type (t)
                      t)
         ($qualified-type (mod-name ty)
                          (string->symbol (string-append (symbol->string mod-name) "::"(symbol->string ty))))
         )))
-  ; ===========================================================================
+  
   (define (decl->name decl)
     (cases VarDeclaration decl
       ($a-var-declaration (var ty)
-                          var)
-      (else #f)
-      ))
+                          var)))
   
   (define (decl->type decl)
     (cases VarDeclaration decl
       ($a-var-declaration (var ty)
-                          ty)
-      (else #f)))      
+                          ty)))
+        
   )

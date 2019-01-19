@@ -3,7 +3,6 @@
   ;; grammar for the CLASSES language.
   ;; Based on IMPLICIT-REFS, 
   ;; plus : multiple-argument procedures, multiple-declaration letrecs, and multiple-declaration lets.   
-  (require "drracket-init.scm")  
   (provide (all-defined-out))
   ; ======================================================================
   
@@ -28,12 +27,10 @@
       (Expression ("+" "(" Expression "," Expression ")") $sum-exp)      
       (Expression ("zero?" "(" Expression ")") $zero?-exp)
       (Expression ("if" Expression "then" Expression "else" Expression) $if-exp)
-         
-      ; proc
-      (Expression ("proc" "(" (separated-list identifier ",") ")" Expression) $proc-exp)
-      (Expression ("(" Expression (arbno Expression) ")") $call-exp)
-      
+      ; multi version
       (Expression ("let" (arbno identifier "=" Expression) "in" Expression) $let-exp)
+      (Expression ("proc" "(" (separated-list identifier ",") ")" Expression) $proc-exp)
+      (Expression ("(" Expression (arbno Expression) ")") $call-exp)           
       (Expression ("letrec" (arbno identifier "(" (separated-list identifier ",") ")"  "=" Expression)  "in" Expression) $letrec-exp)
       
       (Expression ("begin" Expression (arbno ";" Expression) "end") $begin-exp)
@@ -69,10 +66,6 @@
   
   (define scan&parse
     (sllgen:make-string-parser the-lexical-spec the-grammar))
-  
-  (define just-scan
-    (sllgen:make-string-scanner the-lexical-spec the-grammar))
-
   (define sp scan&parse)
   
   )

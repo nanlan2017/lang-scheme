@@ -2,10 +2,9 @@
 
   (require "0-lang.scm")
   (require "1-data-structures-static.scm")
-  (require "2-data-structures.scm")
 
-  (provide expand-type)
-  (provide expand-iface)
+  (provide expand-type
+           expand-iface)
   ;=============================================================================
   ; expand-type :: Type * TEnv -> ExpandedType
   (define (expand-type ty tenv)
@@ -15,12 +14,12 @@
       ($bool-type ()
                   ($bool-type))
       ($proc-type (arg-type result-type)
-                 ($proc-type (expand-type arg-type tenv) (expand-type result-type tenv)))
+                  ($proc-type (expand-type arg-type tenv) (expand-type result-type tenv)))
       ; 核心：化名type / 抽象type 
       ($named-type (name)
-                  (lookup-type-name-in-tenv tenv name))
+                   (lookup-type-name-in-tenv tenv name))
       ($qualified-type (m-name t-name)
-                      (lookup-qualified-type-in-tenv m-name t-name tenv))
+                       (lookup-qualified-type-in-tenv m-name t-name tenv))
       ))
 
   (define (lookup-type-name-in-tenv tenv name)
@@ -39,14 +38,12 @@
       ($extend-tenv-with-type (ty etype saved-tenv)
                               (cases Type ty
                                 ($qualified-type (mod-id ty-id)
-                                             (if (and (eqv? m-name mod-id) (eqv? t-name ty-id))
-                                                 etype
-                                                 (lookup-qualified-type-in-tenv m-name t-name saved-tenv)))
+                                                 (if (and (eqv? m-name mod-id) (eqv? t-name ty-id))
+                                                     etype
+                                                     (lookup-qualified-type-in-tenv m-name t-name saved-tenv)))
                                 (else (lookup-qualified-type-in-tenv m-name t-name saved-tenv))))
       (else (lookup-qualified-type-in-tenv m-name t-name (get-nested-tenv tenv)))))
   ;-----------------------------------------------------------------------------
-    
-  
   (define (expand-iface m-name iface tenv)
     iface)
 

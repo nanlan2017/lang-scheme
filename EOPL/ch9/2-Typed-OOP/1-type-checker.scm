@@ -1,8 +1,8 @@
 (module checker (lib "eopl.ss" "eopl")
 
   (require "0-lang.scm")
-  (require "4-static-classes.scm")
-  (require "4-static-data-structures.scm")
+  (require "1-classes-static.scm")
+  (require "1-data-structures-static.scm")
 
   (provide typer
            type-to-external-form

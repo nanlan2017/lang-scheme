@@ -1,6 +1,4 @@
 (module store (lib "eopl.ss" "eopl")
-  
-  (require "drracket-init.scm")
    
   (provide initialize-store!
            reference?
@@ -10,11 +8,10 @@
            setref!
            
            get-store-as-list
-           ; setting option
-           instrument-newref
+
            )
   ; ========================================================  
-  (define instrument-newref (make-parameter #f))  
+
 
   (define %%Store 'uninitialized)
 
@@ -37,8 +34,7 @@
     (lambda (val)
       (let ((next-ref (length %%Store)))
         (set! %%Store (append %%Store (list val)))
-        (when (instrument-newref)
-          (eopl:printf  "newref: allocating location ~s with initial contents ~s~%" next-ref val))                     
+                             
         next-ref)))                     
 
   ;; deref : Ref -> ExpVal

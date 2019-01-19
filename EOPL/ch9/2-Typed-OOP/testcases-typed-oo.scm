@@ -1,11 +1,8 @@
 (module testcases-typed-oo (lib "eopl.ss" "eopl")
   (require "0-lang.scm")
-  (require "1-store.scm")
-  (require "2-classes.scm")
-  (require "2-data-structures.scm")
-  (require "3-environments.scm")
-  (require "4-type-checker.scm")
-  (require "5-interp.scm")
+  (require "0-store.scm")
+  (require "1-type-checker.scm")
+  (require "2-interp.scm")
   
   (provide (all-defined-out))
   ;==============================================================

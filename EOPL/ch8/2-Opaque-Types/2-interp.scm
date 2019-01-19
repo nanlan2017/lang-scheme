@@ -1,9 +1,8 @@
 (module interp (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "data-structures.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
+  (require "2-data-structures.scm")
   ;;============================================================= procedure  
   ;; apply-procedure : Proc * Val -> ExpVal
   (define (apply-procedure proc arg)
@@ -23,23 +22,23 @@
                                                                         env))]
                                   (add-module-defns-to-env (cdr defns) new-env))))))
   
-  ; eval-module-body :: ModuleBody<#[VarDefinitions]> * Env -> TypedModule<#bindings = extend-env>
+  ; eval-module-body :: ModuleBody * Env -> TypedModule
   (define (eval-module-body m-body env)
     (cases ModuleBody m-body
       ($a-module-body (var-defs)
-                      ($a-simple-module (defns-to-env defns env)))))
+                      ($a-simple-module (defns-to-env var-defs env)))))
   
   ; defns-to-env :: [VarDefinition] * Env -> Env
   (define (defns-to-env defns env)
     (if (null? defns)
         ($empty-env)   ; ★ 而不是env | Env是用来作为var-defns的求值环境、但生成的小Env不直接加在Env中！
         (cases VarDefinition (car defns)
-          ($a-val-definition (var exp)
-                    (let [(val (eval exp env))
-                          (new-env ($extend-env var val env))]
-                      ($extend-env var val (defns-to-env (cdr defns) new-env))))
+          ($a-var-definition (var exp)
+                             (let* [(val (eval exp env))
+                                    (new-env ($extend-env var val env))]
+                               ($extend-env var val (defns-to-env (cdr defns) new-env))))
           ($type-definition (type-name type)
-                     (defns-to-env (cdr defns) env)))))
+                            (defns-to-env (cdr defns) env)))))
   
   ;;============================================================= 
   ; interp :: String -> ExpVal
@@ -75,22 +74,18 @@
       ($let-exp (var e1 body)
                 (let [(v1 (eval e1 env))]
                   (eval body ($extend-env var v1 env))))
-      ;; 1-arg proc
       ($proc-exp (var ty body)
                  ($proc-val ($procedure var body env)))
       ($call-exp (rator rand)
                  (let [(f (expval->proc (eval rator env)))
                        (arg (eval rand env))]
                    (apply-procedure f arg)))                               
-      ;; letrec
       ($letrec-exp (p-res-type pid b-var b-var-type p-body letrec-body)
                    (eval letrec-body ($extend-env-rec pid b-var p-body env)))
-      ;; 
+      ; -------------------------------
       ($qualified-var-exp (mod-name var-name)
                           (lookup-qualified-var-in-env mod-name var-name env))
                   
       ))
-
-
 
   )

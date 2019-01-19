@@ -3,7 +3,7 @@
   ;; grammar for the CLASSES language.
   ;; Based on IMPLICIT-REFS, 
   ;; plus : multiple-argument procedures, multiple-declaration letrecs, and multiple-declaration lets.   
-  (require "drracket-init.scm")  
+
   (provide (all-defined-out))
   ; ======================================================================
   
@@ -90,45 +90,7 @@
     (sllgen:make-string-scanner the-lexical-spec the-grammar))
 
   (define sp scan&parse)
-  ; ================================================================== 
-  (define type->class-name
-    (lambda (ty)
-      (cases Type ty
-        ($class-type (name) name)
-        (else (eopl:error 'type->class-name
-                "Not a class type: ~s"
-                ty)))))
 
-  (define class-type?
-    (lambda (ty)
-      (cases Type ty
-        ($class-type (name) #t)
-        (else #f))))
-
-  (define type-to-external-form
-    (lambda (ty)
-      (cases Type ty
-        ($int-type () 'int)
-        ($bool-type () 'bool)
-        ($void-type () 'void)
-        ($class-type (name) name)
-        ($list-type (ty) (list 'listof (type-to-external-form ty)))
-        ($proc-type (arg-types result-type)
-          (append
-            (formal-types-to-external-form arg-types)
-            '(->)
-            (list (type-to-external-form result-type)))))))
-
-  (define formal-types-to-external-form
-    (lambda (types)
-      (if (null? types)
-        '()
-        (if (null? (cdr types))
-          (list (type-to-external-form (car types)))
-          (cons
-            (type-to-external-form (car types))
-            (cons '*
-              (formal-types-to-external-form (cdr types))))))))
   
   )
 

@@ -1,6 +1,6 @@
 (module classes (lib "eopl.ss" "eopl")
   (require "0-lang.scm")
-  (require "1-store.scm")
+  (require "0-store.scm")
   
 
   ;; object interface

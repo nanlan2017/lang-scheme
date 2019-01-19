@@ -1,10 +1,10 @@
 (module testcases-CLASSES (lib "eopl.ss" "eopl")
-  (require "lang.scm")
-  (require "store.scm")
-  (require "classes.scm")
-  (require "data-structures.scm")
-  (require "environments.scm")
-  (require "interp.scm")
+  (require "0-lang.scm")
+  (require "0-store.scm")
+  
+  (require "1-data-structures.scm")
+  (require "1-classes.scm")
+  (require "2-interp.scm")
   
   (provide (all-defined-out))
   ;==============================================================
@@ -80,5 +80,4 @@ class c3 extends c2
 let o3 = new c3()
 in send o3 m3()
 ")
-    )
-  
+  )

@@ -1,5 +1,5 @@
 (module testcases (lib "eopl.ss" "eopl")
-  (require "lang.scm")
+  (require "0-lang.scm")
   (provide (all-defined-out))
   
   (define this-is-not-src

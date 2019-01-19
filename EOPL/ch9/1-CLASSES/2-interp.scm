@@ -1,20 +1,18 @@
 (module interp (lib "eopl.ss" "eopl")
   
-  (require "drracket-init.scm")
 
-  (require "lang.scm")
-  (require "store.scm")
-  (require "classes.scm")
-  (require "data-structures.scm")
-  (require "environments.scm")
+  (require "0-lang.scm")
+  (require "0-store.scm")
+  (require "1-classes.scm")
+  (require "1-data-structures.scm")
+  
+
   
   (provide value-of-program
            value-of
-           option@log-let
            run
            )
-  ; =====================================================================
-  (define option@log-let (make-parameter #f))
+
 
   ; ===================================================================== the interpreter
   (define (run src)
@@ -64,18 +62,10 @@
                      (value-of exp2 env)))
 
         ($let-exp (vars exps body)       
-                  (when (option@log-let)
-                    (eopl:printf "entering let ~s~%" vars))
+                  
                   (let ((new-env 
                          ($extend-env vars (map newref (values-of-exps exps env)) env)))
-                    (when (option@log-let)
-                      (begin
-                        (eopl:printf "entering body of let ~s with env =~%" vars)
-                        (pretty-print (env->list new-env))
-                        (eopl:printf "store =~%")
-                        (pretty-print (store->readable (get-store-as-list)))
-                        (eopl:printf "~%")
-                        ))
+                    
                     (value-of body new-env)))
 
         ($proc-exp (bvars body)
@@ -111,7 +101,7 @@
         ($new-object-exp (class-name rands)
                          (let ((args (values-of-exps rands env))
                                (obj (new-object class-name)))
-                           (░░apply-method (find-method class-name 'initialize) obj args)
+                           (apply-method (find-method class-name 'initialize) obj args)
                            obj))
 
         ($self-exp ()
@@ -120,7 +110,7 @@
         ($method-call-exp (obj-exp method-name rands)
                           (let ((args (values-of-exps rands env))
                                 (obj (value-of obj-exp env)))
-                            (░░apply-method
+                            (apply-method
                              (find-method (object->class-name obj) method-name)
                              obj
                              args)))
@@ -128,7 +118,7 @@
         ($super-call-exp (method-name rands)
                          (let ((args (values-of-exps rands env))
                                (obj (apply-env env '%self)))
-                           (░░apply-method
+                           (apply-method
                             (find-method (apply-env env '%super) method-name)
                             obj
                             args)))        
@@ -140,18 +130,12 @@
       (cases Proc proc1
         ($procedure (vars body saved-env)
                     (let ((new-env ($extend-env vars (map newref args) saved-env)))
-                      (when (option@log-let)
-                        (begin
-                          (eopl:printf "entering body of proc ~s with env =~%" vars)
-                          (pretty-print (env->list new-env)) 
-                          (eopl:printf "store =~%")
-                          (pretty-print (store->readable (get-store-as-list)))
-                          (eopl:printf "~%")))
+                      
                       (value-of body new-env))))))
 
   
   ;; apply-method : Method * Obj * Listof(ExpVal) -> ExpVal
-  (define ░░apply-method                    
+  (define apply-method                    
     (lambda (m self args)
       (cases Method m
         ($a-method (vars body super-name field-names)

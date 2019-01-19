@@ -1,8 +1,8 @@
 (module data-structures (lib "eopl.ss" "eopl")
 
-  (require "lang.scm")                  ; for expression?
-  (require "store.scm")                 ; for reference?
-  (require "classes.scm")               ; for object?
+  (require "0-lang.scm")                  ; for expression?
+  (require "0-store.scm")                 ; for reference?
+  (require "1-classes.scm")               ; for object?
 
   (provide (all-defined-out))
 
@@ -54,6 +54,17 @@
       (eopl:error 'expval-extractors "Looking for a ~s, found ~s"
                   variant value)))
 
+  ;; expval->printable : ExpVal -> List
+  ;; returns a value like its argument, except procedures get cleaned up with env->list 
+  (define expval->printable
+    (lambda (val)
+      (cases ExpVal val
+        ($proc-val (p)
+                   (cases Proc p
+                     ($procedure (var body saved-env)
+                                 (list 'procedure var '... (env->list saved-env)))))
+        (else val))))  
+
   ; =================================================== procedures
 
   (define-datatype Proc Proc?
@@ -79,6 +90,53 @@
      (saved-env Env?))
     )
 
+
+
+
+  ; ================================================================  Env 
+  (define init-env 
+    ($empty-env))
+
+  (define extend-env1
+    (lambda (id val env)
+      ($extend-env (list id) (list val) env)))
+
+  ;;;;;;;;;;;;;;;; environment constructors and observers ;;;;;;;;;;;;;;;;
+
+  (define apply-env
+    (lambda (env search-sym)
+      (cases Env env
+        ($empty-env ()
+                    (eopl:error 'apply-env "No binding for ~s" search-sym))
+        ($extend-env (bvars bvals saved-env)
+                     (cond
+                       ((location search-sym bvars)
+                        => (lambda (n)
+                             (list-ref bvals n)))
+                       (else
+                         (apply-env saved-env search-sym))))
+        ($extend-env-rec** (p-names b-varss p-bodies saved-env)
+                           (cond 
+                             ((location search-sym p-names)
+                              => (lambda (n)
+                                   (newref ($proc-val ($procedure  (list-ref b-varss n) (list-ref p-bodies n) env)))))
+                             (else (apply-env saved-env search-sym))))
+        ($extend-env-with-self-and-super (self super-name saved-env)
+                                         (case search-sym
+                                           ((%self) self)
+                                           ((%super) super-name)
+                                           (else (apply-env saved-env search-sym)))))))
+
+  ;; location : Sym * Listof(Sym) -> Maybe(Int)
+  ;; (location sym syms) returns the location of sym in syms or #f is sym is not in syms.
+  (define location
+    (lambda (sym syms)
+      (cond
+        ((null? syms) #f)
+        ((eqv? sym (car syms)) 0)
+        ((location sym (cdr syms)) => (lambda (n) (+ n 1)))
+        (else #f))))
+  
   ;; env->list : Env -> List
   ;; used for pretty-printing and debugging
   (define env->list
@@ -96,17 +154,5 @@
         ($extend-env-with-self-and-super (self super-name saved-env)
                                          (cons
                                           (list 'self self 'super super-name)
-                                          (env->list saved-env))))))
-
-  ;; expval->printable : ExpVal -> List
-  ;; returns a value like its argument, except procedures get cleaned up with env->list 
-  (define expval->printable
-    (lambda (val)
-      (cases ExpVal val
-        ($proc-val (p)
-                   (cases Proc p
-                     ($procedure (var body saved-env)
-                                 (list 'procedure var '... (env->list saved-env)))))
-        (else val))))
-
+                                          (env->list saved-env))))))  
   )

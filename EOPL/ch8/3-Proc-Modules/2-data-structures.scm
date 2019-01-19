@@ -1,7 +1,7 @@
 (module data-structures (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
-  (require "lang.scm")
-  (require "utils.scm")
+  (require "0-lang.scm")
+
   ;;============================================================= Expressed Value
   (define-datatype ExpVal ExpVal?
     ($num-val
@@ -121,82 +121,7 @@
       (cases TypedModule mod-val
         ($a-simple-module (bindings)
                           (apply-env bindings var-name)))))
-  ;;============================================================== TEnv : typer过程中，需保存的上下文类型
-  (define-datatype TEnv TEnv?
-    ($empty-tenv)
-    ($extend-tenv
-     (var symbol?)
-     (ty Type?)
-     (tenv TEnv?))
-    ; module
-    ($extend-tenv-with-module
-     (name symbol?)
-     (face SimpleInterface?)
-     (tenv TEnv?))
-    ; expanded-type
-    ($extend-tenv-with-type
-     (name Type?)  ; named type:  ① transparent Point = Int  ② type Point = Int    |    qualified type(opaque type) :  m1::Point
-     (type Type?)  ;         m1::Point ~  Int                                      |           m1::Point ~ m1::Point
-     (tenv TEnv?))
-    )
 
-  (define (get-nested-tenv tenv)
-    (cases TEnv tenv
-      ($empty-tenv ()
-                   (eopl:error 'get-nested-tenv "No nested tenv for Empty-tenv !"))
-      ($extend-tenv (saved-var saved-ty saved-tenv)
-                    saved-tenv)
-      ($extend-tenv-with-module (mod-name face saved-tenv)
-                                saved-tenv)
-      ($extend-tenv-with-type (ty etype saved-tenv)
-                              saved-tenv)
-      ))
-
-  (define (init-tenv)
-    ($extend-tenv 'i ($int-type)
-                  ($extend-tenv 'v ($int-type)
-                                ($extend-tenv 'x ($int-type) ($empty-tenv)))))
-  
-  (define (apply-tenv tenv var)
-    (cases TEnv tenv
-      ($empty-tenv ()
-                   (eopl:error 'apply-tenv "Didn't find in type-env while search : ~s" var))
-      ($extend-tenv (saved-var saved-ty saved-tenv)
-                    (if (equal? var saved-var)
-                        saved-ty
-                        (apply-tenv saved-tenv var)))
-      ($extend-tenv-with-module (mod-name face saved-tenv)
-                                (apply-tenv saved-tenv var))
-      ($extend-tenv-with-type (ty etype saved-tenv)
-                              (apply-tenv saved-tenv var))
-
-      ))
-  ;----------------------------------------------------------- Observer: 在TEnv中查找module内的var的type
-  ; lookup-module-name-in-tenv :: TEnv * Symbol -> ModuleInterface
-  (define (lookup-module-in-tenv tenv m-name)
-    (cases TEnv tenv
-      ($extend-tenv-with-module (mod-id face saved-tenv)
-                                (if (eqv? m-name mod-id)
-                                    face
-                                    (lookup-module-in-tenv saved-tenv m-name)))
-      (else (lookup-module-in-tenv (get-nested-tenv tenv) m-name))))
-
-  ; lookup-qualified-var-in-tenv :: Symbol * Symbol * TEnv -> Type                      
-  (define (lookup-qualified-var-in-tenv m-name var-name tenv)
-    (let ((iface (lookup-module-in-tenv tenv m-name)))
-      (cases SimpleInterface iface
-        ($a-simple-interface (decls)
-                             (lookup-variable-name-in-decls var-name decls)))))
-
-  ; lookup-variable-name-in-decls :: Symbol * [VarDeclaration] -> Type
-  (define (lookup-variable-name-in-decls var-name decls)
-    (cases VarDeclaration (car decls)
-      ($a-var-declaration (var ty)
-                          (if (eqv? var var-name)
-                              ty
-                              (lookup-variable-name-in-decls var-name (cdr decls))))
-      (else (lookup-variable-name-in-decls var-name (cdr decls)))))
-                         
      
 
   )

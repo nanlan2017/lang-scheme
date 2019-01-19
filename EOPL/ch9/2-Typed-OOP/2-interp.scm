@@ -1,20 +1,15 @@
 (module interp (lib "eopl.ss" "eopl")
-  
-  (require "drracket-init.scm")
 
   (require "0-lang.scm")
-  (require "1-store.scm")
+  (require "0-store.scm")
   (require "2-classes.scm")
   (require "2-data-structures.scm")
-  (require "3-environments.scm")
   
   (provide value-of-program
            value-of
-           option@log-let
            run
            )
-  ; =====================================================================
-  (define option@log-let (make-parameter #f))
+
 
   ; ===================================================================== the interpreter
   (define (run src)
@@ -64,18 +59,10 @@
                      (value-of exp2 env)))
 
         ($let-exp (vars exps body)       
-                  (when (option@log-let)
-                    (eopl:printf "entering let ~s~%" vars))
+                  
                   (let ((new-env 
                          ($extend-env vars (map newref (values-of-exps exps env)) env)))
-                    (when (option@log-let)
-                      (begin
-                        (eopl:printf "entering body of let ~s with env =~%" vars)
-                        (pretty-print (env->list new-env))
-                        (eopl:printf "store =~%")
-                        (pretty-print (store->readable (get-store-as-list)))
-                        (eopl:printf "~%")
-                        ))
+                    
                     (value-of body new-env)))
 
         ($proc-exp (bvars bvars-types body)
@@ -152,13 +139,7 @@
       (cases Proc proc1
         ($procedure (vars body saved-env)
                     (let ((new-env ($extend-env vars (map newref args) saved-env)))
-                      (when (option@log-let)
-                        (begin
-                          (eopl:printf "entering body of proc ~s with env =~%" vars)
-                          (pretty-print (env->list new-env)) 
-                          (eopl:printf "store =~%")
-                          (pretty-print (store->readable (get-store-as-list)))
-                          (eopl:printf "~%")))
+                      
                       (value-of body new-env))))))
 
   

@@ -1,7 +1,6 @@
 (module static-classes (lib "eopl.ss" "eopl")
 
   (require "0-lang.scm")
-  (require "4-static-data-structures.scm")
 
   (provide (all-defined-out))
 

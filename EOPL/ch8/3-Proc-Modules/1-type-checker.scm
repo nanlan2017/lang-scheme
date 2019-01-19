@@ -1,12 +1,11 @@
 (module type-checker (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   
-  (require "lang.scm")
-  (require "lang-type.scm")
-  (require "data-structures.scm")
-  (require "expand-type.scm")
+  (require "0-lang.scm")
+
+  (require "1-data-structures-static.scm")
+  (require "1-expand-type.scm")
   ; ===============================================================================================================  
-  ; parse得到 ModuleDefinition后， 直接加入 TEnv中  （此时要进行 Interface vs BodyImpl 的type check）
   (define (add-module-defns-to-tenv defns tenv)
     (if (null? defns)
         tenv
@@ -18,7 +17,7 @@
                                         (add-module-defns-to-tenv (cdr defns) new-tenv))
                                       (report-module-doesnt-satisfy-iface m-name expected-iface actual-iface)))))))
 
-  ;-------------------------------------------------------------------------------- 检查interface和 body的一致性
+  ; 检查interface和 body的一致性
   ; interface-of :: ModuleBody * TEnv -> ModuleInterface
   (define (interface-of m-body tenv)
     (cases ModuleBody m-body
@@ -37,22 +36,13 @@
                             (let [(actual-ty (expand-type ty tenv))]
                               (defns-to-decls (cdr defns) ($extend-tenv-with-type actual-ty  tenv))))
           )))
-  ;---------------------------------------------
+
   (define (<:-iface iface1 iface2 tenv)
     (cases SimpleInterface iface1
       ($a-simple-interface (var-decl-s1)
                            (cases SimpleInterface iface2
                              ($a-simple-interface (var-decl-s2)
                                                   (<:-decls var-decl-s1 var-decl-s2 tenv))))))
-  (define (decl->name decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          var)))
-  
-  (define (decl->type decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          ty)))
 
   ; [ a:Int ; b:Int]   <:   [a:Int]
   (define (<:-decls decls1 decls2 tenv)
@@ -70,18 +60,11 @@
   (define (report-module-doesnt-satisfy-iface m-name expected-type actual-type)
     (eopl:printf  (list 'error-in-defn-of-module: m-name 'expected-type: expected-type 'actual-type: actual-type))
     (eopl:error 'type-of-module-defn))
-  ; ===============================================================================================================
-  ;; check-equal-type! : Type * Type * Exp -> Unspecified
-  (define ░░check-equal-type!
-    (lambda (ty1 ty2 exp)
-      (when (not (equal? ty1 ty2))
-        (report-unequal-types ty1 ty2 exp))))
 
-  ;; report-unequal-types : Type * Type * Exp -> Unspecified
-  (define report-unequal-types
-    (lambda (ty1 ty2 exp)
-      (eopl:error 'check-equal-type!  "Types didn't match: ~s != ~a in~%~a"  (type-to-external-form ty1) (type-to-external-form ty2) exp)))
   ; ===============================================================================================================
+  (define (check src)
+    (type-to-external-form (type-of-program (scan&parse src))))
+  
   (define (type-of-program pgm)
     (cases Program pgm
       ($a-program (mod-defn-s exp)
@@ -145,9 +128,5 @@
                        (type-of letrec-body tenv-for-letrec-body))))
         
       ))
-
-  ; ===============================================================================================================
-  (define (check src)
-    (type-to-external-form (type-of-program (scan&parse src))))
 
   )

@@ -4,7 +4,6 @@
   (require "0-lang.scm")
   (require "1-data-structures-static.scm")
   (require "1-expand-type.scm")
-  (require "2-data-structures.scm")
   
   ; ===============================================================================================================  
   ; parse得到 ModuleDefinition后， 直接加入 TEnv中
@@ -32,7 +31,7 @@
         '()
         (cases VarDefinition (car defns)
           ($a-var-definition (var-name exp)
-                             (let ((ty (type-of exp tenv)))
+                             (let ((ty (typeof exp tenv)))
                                (cons ($a-var-declaration var-name ty)
                                      (defns-to-decls (cdr defns) ($extend-tenv var-name ty tenv)))))
           ($type-definition (name ty) ; type Point = Int  ===>  TEnv <Point~Int>
@@ -62,84 +61,72 @@
   (define (report-module-doesnt-satisfy-iface m-name expected-type actual-type)
     (eopl:printf  (list 'error-in-defn-of-module: m-name 'expected-type: expected-type 'actual-type: actual-type))
     (eopl:error 'type-of-module-defn))
-  ; ===============================================================================================================
-  ;; check-equal-type! : Type * Type * Exp -> Unspecified
-  (define ░░check-equal-type!
-    (lambda (ty1 ty2 exp)
-      (when (not (equal? ty1 ty2))
-        (report-unequal-types ty1 ty2 exp))))
 
-  ;; report-unequal-types : Type * Type * Exp -> Unspecified
-  (define report-unequal-types
-    (lambda (ty1 ty2 exp)
-      (eopl:error 'check-equal-type!  "Types didn't match: ~s != ~a in~%~a"  (type-to-external-form ty1) (type-to-external-form ty2) exp)))
   ; ===============================================================================================================
+  (define (check src)
+    (type-to-external-form (type-of-program (scan&parse src))))
+  
   (define (type-of-program pgm)
     (cases Program pgm
       ($a-program (mod-defn-s exp)
-                  (type-of exp (add-module-defns-to-tenv mod-defn-s (init-tenv))))))
+                  (typeof exp (add-module-defns-to-tenv mod-defn-s (init-tenv))))))
 
-  (define (type-of exp tenv)
+  (define (typeof exp tenv)
     (cases Expression exp
       ($const-exp (num)
                   ($int-type))
+      ($var-exp (var)
+                (apply-tenv tenv var))
         
       ($diff-exp (exp1 exp2)
-                 (let ((type1 (type-of exp1 tenv))
-                       (type2 (type-of exp2 tenv)))
-                   (░░check-equal-type! type1 ($int-type) exp1)
-                   (░░check-equal-type! type2 ($int-type) exp2)
+                 (let ((type1 (typeof exp1 tenv))
+                       (type2 (typeof exp2 tenv)))
+                   (check-equal-type! type1 ($int-type) exp1)
+                   (check-equal-type! type2 ($int-type) exp2)
                    ($int-type)))
         
       ($zero?-exp (exp1)
-                  (let ((type1 (type-of exp1 tenv)))
-                    (░░check-equal-type! type1 ($int-type) exp1)
+                  (let ((type1 (typeof exp1 tenv)))
+                    (check-equal-type! type1 ($int-type) exp1)
                     ($bool-type)))
         
       ($if-exp (exp1 exp2 exp3)
-               (let ((ty1 (type-of exp1 tenv))
-                     (ty2 (type-of exp2 tenv))
-                     (ty3 (type-of exp3 tenv)))
-                 (░░check-equal-type! ty1 ($bool-type) exp1)
-                 (░░check-equal-type! ty2 ty3 exp)
+               (let ((ty1 (typeof exp1 tenv))
+                     (ty2 (typeof exp2 tenv))
+                     (ty3 (typeof exp3 tenv)))
+                 (check-equal-type! ty1 ($bool-type) exp1)
+                 (check-equal-type! ty2 ty3 exp)
                  ty2))
-        
-      ($var-exp (var)
-                (apply-tenv tenv var))
-
-      ($qualified-var-exp (m-name var-name) 
-                          (lookup-qualified-var-in-tenv m-name var-name tenv))
 
       ($let-exp (var exp1 body)
-                (let ((rhs-type (type-of exp1 tenv)))
-                  (type-of body ($extend-tenv var rhs-type tenv))))
+                (let ((rhs-type (typeof exp1 tenv)))
+                  (typeof body ($extend-tenv var rhs-type tenv))))
         
       ($proc-exp (bvar bvar-type body)
                  (let ((expanded-bvar-type (expand-type bvar-type tenv)))
-                   (let ((result-type (type-of body ($extend-tenv bvar expanded-bvar-type tenv))))
+                   (let ((result-type (typeof body ($extend-tenv bvar expanded-bvar-type tenv))))
                      ($proc-type expanded-bvar-type result-type))))
         
       ($call-exp (rator rand) 
-                 (let ((rator-type (type-of rator tenv))
-                       (rand-type  (type-of rand tenv)))
+                 (let ((rator-type (typeof rator tenv))
+                       (rand-type  (typeof rand tenv)))
                    (cases Type rator-type
                      ($proc-type (arg-type result-type)
                                  (begin
-                                   (░░check-equal-type! arg-type rand-type rand)
+                                   (check-equal-type! arg-type rand-type rand)
                                    result-type))
                      (else (eopl:error 'type-of "Rator not a proc type:~%~s~%had rator type ~s" rator (type-to-external-form rator-type))))))
         
       ($letrec-exp (proc-result-type proc-name bvar bvar-type proc-body letrec-body)
                    (let ((tenv-for-letrec-body ($extend-tenv  proc-name (expand-type ($proc-type bvar-type proc-result-type) tenv) tenv)))
                      (let ((proc-result-type (expand-type proc-result-type tenv))
-                           (proc-body-type (type-of proc-body ($extend-tenv bvar (expand-type bvar-type tenv) tenv-for-letrec-body))))
-                       (░░check-equal-type! proc-body-type proc-result-type proc-body)
-                       (type-of letrec-body tenv-for-letrec-body))))
+                           (proc-body-type (typeof proc-body ($extend-tenv bvar (expand-type bvar-type tenv) tenv-for-letrec-body))))
+                       (check-equal-type! proc-body-type proc-result-type proc-body)
+                       (typeof letrec-body tenv-for-letrec-body))))
+      ; -----------------------
+      ($qualified-var-exp (m-name var-name) 
+                          (lookup-tenv/qualified-var=>type m-name var-name tenv))      
         
       ))
-
-  ; ===============================================================================================================
-  (define (check src)
-    (type-to-external-form (type-of-program (scan&parse src))))
 
   )
