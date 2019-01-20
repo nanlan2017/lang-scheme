@@ -34,9 +34,9 @@
                              (let ((ty (typeof exp tenv)))
                                (cons ($a-var-declaration var-name ty)
                                      (defns-to-decls (cdr defns) ($extend-tenv var-name ty tenv)))))
-          ($type-definition (name ty) ; type Point = Int  ===>  TEnv <Point~Int>
+          ($type-definition (ty-name ty) ; ██████ type Point = Int  ===>  TEnv <Point~Int>
                             (let [(actual-ty (expand-type ty tenv))]
-                              (defns-to-decls (cdr defns) ($extend-tenv-with-type actual-ty  tenv))))
+                              (defns-to-decls (cdr defns) ($extend-tenv-with-type ty-name actual-ty tenv))))
           )))
   
   (define (<:-iface iface1 iface2 tenv)

@@ -13,10 +13,10 @@
      (name symbol?)
      (face Interface?)
      (tenv TEnv?))
-    ; expanded-type
+    
     ($extend-tenv-with-type
-     (name Type?)  ; named type:  1 transparent Point = Int  2 type Point = Int    |    qualified type(opaque type) :  m1::Point
-     (type Type?)  ;         m1::Point ~  Int                                      |           m1::Point ~ m1::Point
+     (name Type?)  
+     (type Type?)    ; expanded-type   
      (tenv TEnv?))
     )
 

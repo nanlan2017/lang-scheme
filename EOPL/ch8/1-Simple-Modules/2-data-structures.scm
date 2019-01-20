@@ -99,6 +99,12 @@
      (bindings Env?))
     )
 
+  (define (lookup-qualified-var-in-env mod-name var-name env)
+    (let [(mod-val (lookup-module-in-env mod-name env))]
+      (cases TypedModule mod-val
+        ($a-simple-module (bindings)
+                          (apply-env bindings var-name)))))  
+
   (define (lookup-module-in-env mod-name env)
     (cases Env env
       ($extend-env-with-module (mod-id mod-val saved-env)
@@ -106,13 +112,5 @@
                                    mod-val
                                    (lookup-module-in-env mod-name saved-env)))
       (else (lookup-module-in-env mod-name (get-nested-env env)))))
-
-  (define (lookup-qualified-var-in-env mod-name var-name env)
-    (let [(mod-val (lookup-module-in-env mod-name env))]
-      (cases TypedModule mod-val
-        ($a-simple-module (bindings)
-                          (apply-env bindings var-name)))))
-                         
-     
 
   )

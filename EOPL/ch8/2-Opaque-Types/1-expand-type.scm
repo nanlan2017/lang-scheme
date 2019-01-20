@@ -15,34 +15,34 @@
                   ($bool-type))
       ($proc-type (arg-type result-type)
                   ($proc-type (expand-type arg-type tenv) (expand-type result-type tenv)))
-      ; 核心：化名type / 抽象type 
+      ; 核心：别名type / 抽象type 
       ($named-type (name)
-                   (lookup-type-name-in-tenv tenv name))
+                   (lookup-tenv/named-type=>type tenv name))
       ($qualified-type (m-name t-name)
-                       (lookup-qualified-type-in-tenv m-name t-name tenv))
+                       (lookup-tenv/qualified-type=>type m-name t-name tenv))
       ))
 
-  (define (lookup-type-name-in-tenv tenv name)
+  (define (lookup-tenv/named-type=>type tenv name)
     (cases TEnv tenv
       ($extend-tenv-with-type (ty etype saved-tenv)
                               (cases Type ty
                                 ($named-type (id)
                                              (if (eqv? name id)
                                                  etype
-                                                 (lookup-type-name-in-tenv saved-tenv name)))
-                                (else (lookup-type-name-in-tenv saved-tenv name))))
-      (else (lookup-type-name-in-tenv (get-nested-tenv tenv) name))))
+                                                 (lookup-tenv/named-type=>type saved-tenv name)))
+                                (else (lookup-tenv/named-type=>type saved-tenv name))))
+      (else (lookup-tenv/named-type=>type (get-nested-tenv tenv) name))))
   
-  (define (lookup-qualified-type-in-tenv m-name t-name tenv)
+  (define (lookup-tenv/qualified-type=>type m-name t-name tenv)
     (cases TEnv tenv
       ($extend-tenv-with-type (ty etype saved-tenv)
                               (cases Type ty
                                 ($qualified-type (mod-id ty-id)
                                                  (if (and (eqv? m-name mod-id) (eqv? t-name ty-id))
                                                      etype
-                                                     (lookup-qualified-type-in-tenv m-name t-name saved-tenv)))
-                                (else (lookup-qualified-type-in-tenv m-name t-name saved-tenv))))
-      (else (lookup-qualified-type-in-tenv m-name t-name (get-nested-tenv tenv)))))
+                                                     (lookup-tenv/qualified-type=>type m-name t-name saved-tenv)))
+                                (else (lookup-tenv/qualified-type=>type m-name t-name saved-tenv))))
+      (else (lookup-tenv/qualified-type=>type m-name t-name (get-nested-tenv tenv)))))
   ;-----------------------------------------------------------------------------
   (define (expand-iface m-name iface tenv)
     iface)

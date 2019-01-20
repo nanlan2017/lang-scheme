@@ -18,14 +18,14 @@
         env
         (cases ModuleDefinition (car defns)
           ($a-module-definition (m-name iface m-body)
-                                (let [(new-env ($extend-env-with-module m-name (eval-module-body m-body env) env))]
+                                (let [(new-env ($extend-env-with-module m-name (eval-module-body m-body iface env) env))]  ; 有误，
                                   (add-module-defns-to-env (cdr defns) new-env))))))
   
-  ; eval-module-body :: ModuleBody * Env -> TypedModule
-  (define (eval-module-body m-body env)
+  ; eval-module-body :: ModuleBody * Interface * Env -> TypedModule
+  (define (eval-module-body m-body iface env)
     (cases ModuleBody m-body
       ($a-module-body (var-defs)
-                      ($a-simple-module (defns-to-env var-defs env)))))
+                      ($a-simple-module (limit-to-interface iface (defns-to-env var-defs env))))))
 
   ; defns-to-env : Listof(Defn) × Env → Env
   (define (defns-to-env defns env)
@@ -36,6 +36,38 @@
                              (let ((val (eval exp env)))
                                (let ((new-env ($extend-env var val env)))
                                  ($extend-env var val (defns-to-env (cdr defns) new-env))))))))
+
+  (define (limit-to-interface iface env-of-defns)
+    (let [(i-vars (pick-iface-vars iface))
+          (pair-lst (env-to-list env-of-defns))]
+      (let loop [(pair-lst pair-lst)]
+        (if (null? pair-lst)
+            ($empty-env)
+            (let [(pr (car pair-lst))]
+              (if (memq (car pr) i-vars)
+                  ($extend-env (car pr) (cdr pr) (loop (cdr pair-lst)))
+                  (loop (cdr pair-lst))))))))
+      
+
+  (define (env-to-list env)
+    (cases Env env
+      ($empty-env ()
+                  '())
+      ($extend-env (var val saved-env)
+                   (cons (cons var val) (env-to-list saved-env)))
+      (else (env-to-list (get-nested-env env)))))
+                  
+
+  ; pick-iface-vars :: Interface -> [symbol]
+  (define (pick-iface-vars iface)
+    (cases SimpleInterface iface
+      ($a-simple-interface (var-decls)
+                           (if (null? var-decls)
+                               '()
+                               (cases VarDeclaration (car var-decls)
+                                 ($a-var-declaration (id ty)
+                                                     (cons id (pick-iface-vars ($a-simple-interface (cdr var-decls))))))))))
+                   
 
   
   ;;=============================================================

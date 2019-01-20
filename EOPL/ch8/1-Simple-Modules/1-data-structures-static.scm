@@ -3,6 +3,7 @@
   (require "0-lang.scm")
 
   ; ========================================================================= tenv (symbol <-> type)
+  
   (define-datatype TEnv TEnv?
     ($empty-tenv)
     ($extend-tenv
@@ -45,20 +46,20 @@
   ; 1. 查找 m1::a 的type 
   ; lookup-qualified-var-in-tenv :: [m::a] * TEnv -> Type                      
   (define (lookup-qualified-var-in-tenv m-name var-name tenv)
-    (let ((iface (lookup-tenv/modid=>iface tenv m-name)))
+    (let ((iface (lookup-tenv/id=>iface tenv m-name)))
       (cases SimpleInterface iface
         ($a-simple-interface (decls)
                              (lookup-decls/var=>type var-name decls)))))
   
   ; 2. module-id  ==> Interface
   ; lookup-module-name-in-tenv :: TEnv * Symbol -> Interface
-  (define (lookup-tenv/modid=>iface tenv m-name)
+  (define (lookup-tenv/id=>iface tenv m-name)
     (cases TEnv tenv
       ($extend-tenv-with-module (mod-id face saved-tenv)
                                 (if (eqv? m-name mod-id)
                                     face
-                                    (lookup-tenv/modid=>iface saved-tenv m-name)))
-      (else (lookup-tenv/modid=>iface (get-nested-tenv tenv) m-name))))
+                                    (lookup-tenv/id=>iface saved-tenv m-name)))
+      (else (lookup-tenv/id=>iface (get-nested-tenv tenv) m-name))))
 
   ; 3. Interface(decls) ==> type
   ; lookup-variable-name-in-decls :: Symbol * [VarDeclartion] -> Type

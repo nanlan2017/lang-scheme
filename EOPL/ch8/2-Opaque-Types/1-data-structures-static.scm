@@ -1,7 +1,15 @@
 (module lang-type (lib "eopl.ss" "eopl")
   (provide (all-defined-out))
   (require "0-lang.scm")
-  ;;============================================================== TEnv 
+  ;;============================================================== TEnv
+  ;  we introduce a systematic way of handling opaque and transparent types.
+  ;  An opaque type behaves like a primitive type, such as int or bool.
+  ;  Transparent types, on the other hand, are transparent, as the name suggests: they behave exactly like their definitions.
+  ;  ████ So every type is equivalent to one that is given by the grammar
+  ;             Type ::= int | bool | (Type -> Type) | from m take t   【type alias不是Type的“运行时”值,而像一个Type Ref而已】
+  ;  where t is declared as an opaque type in m. We call a type of this form an expanded type.
+  ;  We next extend type environments to handle new types. Our type environments will bind each named type or qualified type to an expanded type.
+  
   (define-datatype TEnv TEnv?
     ($empty-tenv)
     ($extend-tenv
@@ -12,11 +20,10 @@
     ($extend-tenv-with-module
      (name symbol?)
      (face SimpleInterface?)
-     (tenv TEnv?))
-    ; expanded-type
-    ($extend-tenv-with-type
-     (name Type?)  ; named type:  1 transparent Point = Int  2 type Point = Int    |    qualified type(opaque type) :  m1::Point
-     (type Type?)  ;         m1::Point ~  Int                                      |           m1::Point ~ m1::Point
+     (tenv TEnv?))    
+    ($extend-tenv-with-type  ; 对应body里的 $type-definition
+     (name Type?)   ; 'literal'
+     (type Type?)   ; ★ expanded-type
      (tenv TEnv?))
     )
 
@@ -33,9 +40,7 @@
       ))
 
   (define (init-tenv)
-    ($extend-tenv 'i ($int-type)
-                  ($extend-tenv 'v ($int-type)
-                                ($extend-tenv 'x ($int-type) ($empty-tenv)))))
+    ($empty-tenv))
   
   (define (apply-tenv tenv var)
     (cases TEnv tenv
@@ -53,17 +58,17 @@
       ))
   ;----------------------------------------------------------- Observer: 在TEnv中查找module内的var的type
   ; lookup-module-name-in-tenv :: TEnv * Symbol -> ModuleInterface
-  (define (lookup-module-in-tenv tenv m-name)
+  (define (lookup-tenv/id->iface tenv m-name)
     (cases TEnv tenv
       ($extend-tenv-with-module (mod-id face saved-tenv)
                                 (if (eqv? m-name mod-id)
                                     face
-                                    (lookup-module-in-tenv saved-tenv m-name)))
-      (else (lookup-module-in-tenv (get-nested-tenv tenv) m-name))))
+                                    (lookup-tenv/id->iface saved-tenv m-name)))
+      (else (lookup-tenv/id->iface (get-nested-tenv tenv) m-name))))
 
   ; lookup-qualified-var-in-tenv :: Symbol * Symbol * TEnv -> Type                      
   (define (lookup-tenv/qualified-var=>type m-name var-name tenv)
-    (let ((iface (lookup-module-in-tenv tenv m-name)))
+    (let ((iface (lookup-tenv/id->iface tenv m-name)))
       (cases SimpleInterface iface
         ($a-simple-interface (decls)
                              (lookup-decls/var=>type var-name decls)))))
