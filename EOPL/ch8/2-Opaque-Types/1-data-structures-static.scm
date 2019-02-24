@@ -109,17 +109,100 @@
         ($qualified-type (mod-name ty)
                          (string->symbol (string-append (symbol->string mod-name) "::"(symbol->string ty))))
         )))
-  ; ===========================================================================
-  (define (decl->name decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          var)
-      (else #f)
-      ))
+  ; =========================================================================== predicts, extractors
+  (define atomic-type?
+    (lambda (ty)
+      (cases Type ty
+        ($proc-type (ty1 ty2) #f)
+        (else #t))))
+
+  ; ------------ proc-type
+  (define proc-type?
+    (lambda (ty)
+      (cases Type ty
+        ($proc-type (t1 t2) #t)
+        (else #f))))
+
+  (define proc-type->arg-type
+    (lambda (ty)
+      (cases Type ty
+        ($proc-type (arg-type result-type) arg-type)
+        (else (eopl:error 'proc-type->arg-type "Not a proc type: ~s" ty)))))
+
+  (define proc-type->result-type
+    (lambda (ty)
+      (cases Type ty
+        ($proc-type (arg-type result-type) result-type)
+        (else (eopl:error 'proc-type->result-types "Not a proc type: ~s" ty)))))
   
-  (define (decl->type decl)
-    (cases VarDeclaration decl
-      ($a-var-declaration (var ty)
-                          ty)
-      (else #f)))      
+  ; ----------- module definition
+  (define module-definition->name
+    (lambda (m-defn)
+      (cases ModuleDefinition m-defn
+        ($a-module-definition (m-name m-type m-body)
+                              m-name))))
+
+  (define module-definition->interface
+    (lambda (m-defn)
+      (cases ModuleDefinition m-defn
+        ($a-module-definition (m-name m-type m-body)
+                              m-type))))
+
+  (define module-definition->body
+    (lambda (m-defn)
+      (cases ModuleDefinition m-defn
+        ($a-module-definition (m-name m-type m-body)
+                              m-body))))
+  ; ------------- var declaration
+  (define val-decl?
+    (lambda (decl)
+      (cases VarDeclaration decl
+        ($a-var-declaration (name ty) #t)
+        (else #f))))
+
+  (define transparent-type-decl?
+    (lambda (decl)
+      (cases VarDeclaration decl
+        ($transparent-type-declaration (name ty) #t)
+        (else #f))))
+
+  (define opaque-type-decl?
+    (lambda (decl)
+      (cases VarDeclaration decl
+        ($opaque-type-declaration (name) #t)
+        (else #f))))
+
+  (define decl->name
+    (lambda (decl)
+      (cases VarDeclaration decl
+        ($opaque-type-declaration (name) name)
+        ($transparent-type-declaration (name ty) name)
+        ($a-var-declaration (name ty) name))))
+
+  (define decl->type
+    (lambda (decl)
+      (cases VarDeclaration decl
+        ($transparent-type-declaration (name ty) ty)
+        ($a-var-declaration (name ty) ty)
+        ($opaque-type-declaration (name) (eopl:error 'decl->type "can't take type of abstract type declaration ~s" decl)))))  
+  ; ================================================================================  module definitions
+  ;; maybe-lookup-module-in-list : Sym * Listof(Defn) -> Maybe(Defn)
+  (define maybe-lookup-module-in-list
+    (lambda (name module-defs)
+      (if (null? module-defs)
+          #f
+          (let ((name1 (module-definition->name (car module-defs))))
+            (if (eqv? name1 name)
+                (car module-defs)
+                (maybe-lookup-module-in-list name (cdr module-defs)))))))
+
+  ;; maybe-lookup-module-in-list : Sym * Listof(Defn) -> Defn OR Error
+  (define lookup-module-in-list
+    (lambda (name module-defs)
+      (cond
+        ((maybe-lookup-module-in-list name module-defs) => (lambda (mdef) mdef))
+        (else (eopl:error 'lookup-module-in-list "unknown module ~s" name)))))
+
+
+       
   )
